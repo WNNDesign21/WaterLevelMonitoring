@@ -1,4 +1,5 @@
 import serial
+import serial.tools.list_ports
 import requests
 import re
 import time
@@ -7,10 +8,31 @@ import os
 import statistics
 
 # --- KONFIGURASI ---
-SERIAL_PORT = '/dev/ttyACM0' # Port Arduino Anda
 BAUD_RATE = 115200
 API_BASE_URL = 'http://127.0.0.1:8000/api'
 DEVICE_SLUG = 'cybernova-s400-primary'
+
+def auto_detect_port():
+    """Auto-detect serial port based on common Arduino/IoT device signatures."""
+    ports = serial.tools.list_ports.comports()
+    for port in ports:
+        desc = port.description.lower()
+        hwid = port.hwid.lower()
+        # Deteksi umum untuk Arduino, CH340, CP210x, dan perangkat USB Serial
+        if "arduino" in desc or "ch340" in desc or "cp210" in desc or "usb" in desc or "usb" in hwid:
+            return port.device
+            
+    # Fallback untuk penamaan khusus di Linux (ttyACM atau ttyUSB)
+    for port in ports:
+        if "ttyacm" in port.device.lower() or "ttyusb" in port.device.lower():
+            return port.device
+            
+    # Fallback untuk Windows (COM)
+    com_ports = [p.device for p in ports if "com" in p.device.lower()]
+    if com_ports:
+        return com_ports[-1] # Biasanya port yang terakhir ditambahkan adalah IoT
+        
+    return None
 
 def notify_status(session, status):
     """Kirim status (online/offline) ke server Laravel."""
@@ -29,7 +51,7 @@ def main():
     print("="*60)
     print(f"   CYBERNOVA BRIDGE - REAL-TIME TELEMETRY SYSTEM")
     print("="*60)
-    print(f"[*] Monitoring Port: {SERIAL_PORT}")
+    print(f"[*] Monitoring Port: AUTO-DETECT")
     
     ser = None
     last_status = None
@@ -54,17 +76,32 @@ def main():
     while True:
         try:
             if ser is None:
-                try:
-                    ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=0)
+                detected_port = auto_detect_port()
+                if not detected_port:
+                    if last_status != "offline":
+                        print("[-] Waiting for Device... (Auto-Detecting Port)")
+                        try:
+                            notify_status(api_session, "offline")
+                        except:
+                            pass
+                        last_status = "offline"
                     time.sleep(2)
-                    print(f"\n[+] PORT {SERIAL_PORT} CONNECTED!")
+                    continue
+                    
+                try:
+                    ser = serial.Serial(detected_port, BAUD_RATE, timeout=0)
+                    time.sleep(2)
+                    print(f"\n[+] PORT {detected_port} CONNECTED!")
                     notify_status(api_session, "online")
                     last_status = "online"
                     cycle_start_time = time.time()
                 except serial.SerialException:
                     if last_status != "offline":
-                        print(f"[-] Waiting for Device... ({SERIAL_PORT})")
-                        notify_status(api_session, "offline")
+                        print(f"[-] Connection failed to {detected_port}. Retrying...")
+                        try:
+                            notify_status(api_session, "offline")
+                        except:
+                            pass
                         last_status = "offline"
                     time.sleep(2)
                     continue
