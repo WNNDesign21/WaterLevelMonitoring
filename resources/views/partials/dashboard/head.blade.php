@@ -28,8 +28,13 @@
                         'wave-fast': 'wave 7s linear infinite',
                         'float': 'float 3s ease-in-out infinite',
                         'scan': 'scan 3s linear infinite',
+                        'fade-in-up': 'fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
                     },
                     keyframes: {
+                        'fade-in-up': {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
                         wave: {
                             '0%': { transform: 'translateX(0)' },
                             '100%': { transform: 'translateX(-50%)' }
@@ -52,6 +57,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- Pusher & Echo -->
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
@@ -129,76 +137,168 @@
             background-clip: text;
         }
         
-        /* Animated River Cross-Section */
-        .river-container {
+        /* Luxury Glass Tank Animation */
+        .glass-tank-container {
             position: relative;
             width: 100%;
             height: 100%;
-            background: linear-gradient(to bottom, rgba(248, 250, 252, 0.2) 0%, rgba(226, 232, 240, 0.9) 100%);
-            border-radius: 1.5rem;
-            overflow: visible;
-            border: 2px solid rgba(226, 232, 240, 0.5);
-            box-shadow: inset 0 0 30px rgba(0,0,0,0.05);
+            background: linear-gradient(to bottom, rgba(255,255,255, 0.1) 0%, rgba(255,255,255, 0.6) 100%);
+            border-radius: 2rem;
+            overflow: hidden; /* Contains the water */
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.05), 
+                        inset 0 20px 40px rgba(255,255,255, 0.8),
+                        0 10px 30px rgba(0,0,0,0.05);
             margin-top: 1rem;
+            backdrop-filter: blur(5px);
         }
 
-        /* River Banks (Luxury Aesthetic) */
-        .river-bank-left, .river-bank-right {
+        /* Glare effect for glass tank */
+        .glass-tank-container::after {
+            content: '';
             position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 15%;
-            background: linear-gradient(90deg, var(--luxury-bg) 0%, rgba(248, 250, 252, 0.5) 100%);
-            z-index: 10;
-            border-right: 1px solid var(--luxury-border);
-            box-shadow: 5px 0 15px rgba(0,0,0,0.05);
-        }
-        .river-bank-right {
-            right: 0;
-            left: auto;
-            background: linear-gradient(270deg, var(--luxury-bg) 0%, rgba(248, 250, 252, 0.5) 100%);
-            border-right: none;
-            border-left: 1px solid var(--luxury-border);
-            box-shadow: -5px 0 15px rgba(0,0,0,0.05);
+            top: 0; left: 5%; bottom: 0; width: 15%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transform: skewX(-20deg);
+            z-index: 50;
+            pointer-events: none;
         }
 
-        /* The River Water Container */
-        .river-water {
+        /* The Liquid Container */
+        .liquid-water {
             position: absolute;
             bottom: 0;
             left: 0;
             width: 100%;
             height: 0%; /* Dynamic */
-            transition: height 2.5s cubic-bezier(0.2, 0.8, 0.2, 1), background-image 1s ease, box-shadow 1s ease;
-            overflow: hidden;
+            transition: height 2.5s cubic-bezier(0.2, 0.8, 0.2, 1);
             z-index: 10;
-            border-radius: 0 0 1rem 1rem;
             
-            /* Clean Glowing Top Edge */
-            border-top: 3px solid rgba(255, 255, 255, 0.9);
-            
-            /* Gradient shift animation */
-            background-size: 200% 100%;
-            animation: liquid-flow 15s ease-in-out infinite alternate;
-            
-            /* Dynamic State - Fed by JS variables (--r, --g, --b) */
-            --r: 14; --g: 165; --b: 233; /* Default Blue */
-            --dr: 2; --dg: 132; --db: 199; /* Default Darker Blue */
-            
-            background-image: linear-gradient(90deg, 
-                rgba(var(--r), var(--g), var(--b), 1) 0%, 
-                rgba(var(--dr), var(--dg), var(--db), 1) 50%, 
-                rgba(var(--r), var(--g), var(--b), 1) 100%
-            );
-            box-shadow: 0 -4px 30px rgba(var(--dr), var(--dg), var(--db), 0.5), inset 0 20px 60px rgba(255, 255, 255, 0.4);
+            background: linear-gradient(180deg, #38bdf8 0%, #0369a1 40%, #1e3a8a 100%);
+            box-shadow: inset 0 20px 60px rgba(255, 255, 255, 0.2),
+                        0 -10px 40px rgba(14, 165, 233, 0.3);
+            border-top: 2px solid rgba(255, 255, 255, 0.3);
         }
-        .river-water::before {
+        
+        /* Inner Bubbles / Particles */
+        .liquid-water-particles {
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(rgba(255,255,255,0.4) 1px, transparent 1px);
+            background-size: 30px 30px;
+            opacity: 0.3;
+            animation: rise-up 20s linear infinite;
+            pointer-events: none;
+        }
+
+        /* Waves using CSS mask-image */
+        .liquid-water::before {
             content: '';
             position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 15px;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, transparent 100%);
-            animation: surface-pulse 4s ease-in-out infinite;
+            top: -19px; /* Sit right on top of the liquid */
+            left: -5%;
+            width: 110%; /* Slightly wider to allow swaying */
+            height: 20px;
+            background-color: #38bdf8;
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V95.8C59.71,118.08,130.83,119.56,189.7,100.8,236.4,85.87,281.42,71.21,321.39,56.44Z'/%3E%3C/svg%3E");
+            -webkit-mask-size: 100% 100%;
+            -webkit-mask-repeat: no-repeat;
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V95.8C59.71,118.08,130.83,119.56,189.7,100.8,236.4,85.87,281.42,71.21,321.39,56.44Z'/%3E%3C/svg%3E");
+            mask-size: 100% 100%;
+            mask-repeat: no-repeat;
+            animation: wave-sway 6s ease-in-out infinite alternate;
+        }
+
+        .liquid-water::after {
+            content: '';
+            position: absolute;
+            top: -24px;
+            left: -5%;
+            width: 110%;
+            height: 25px;
+            background-color: rgba(2, 132, 199, 0.8);
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M985.66,92.83C906.67,72,823.78,31,743.84,14.19c-82.26-17.34-168.06-16.33-250.45.39-57.84,11.73-114,31.07-172,41.86A600.21,600.21,0,0,1,0,27.35V120H1200V95.8C1132.19,118.92,1055.71,111.31,985.66,92.83Z'/%3E%3C/svg%3E");
+            -webkit-mask-size: 100% 100%;
+            -webkit-mask-repeat: no-repeat;
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M985.66,92.83C906.67,72,823.78,31,743.84,14.19c-82.26-17.34-168.06-16.33-250.45.39-57.84,11.73-114,31.07-172,41.86A600.21,600.21,0,0,1,0,27.35V120H1200V95.8C1132.19,118.92,1055.71,111.31,985.66,92.83Z'/%3E%3C/svg%3E");
+            mask-size: 100% 100%;
+            mask-repeat: no-repeat;
+            animation: wave-sway-reverse 8s ease-in-out infinite alternate;
+        }
+
+        @keyframes wave-sway {
+            0% { transform: translateX(-2%); }
+            100% { transform: translateX(2%); }
+        }
+        @keyframes wave-sway-reverse {
+            0% { transform: translateX(2%); }
+            100% { transform: translateX(-2%); }
+        }
+
+        /* Cockpit Assembly Animations */
+        @keyframes assembleBg {
+            0% { opacity: 0; box-shadow: none; border-color: transparent; backdrop-filter: blur(0px); }
+            100% { opacity: 1; }
+        }
+        .animate-assemble-bg {
+            opacity: 0;
+            animation: assembleBg 1.5s ease-out forwards;
+        }
+
+        @keyframes assembleLeft {
+            0% { opacity: 0; transform: translateX(-150px) translateZ(-50px) scale(0.9); }
+            100% { opacity: 1; transform: translateX(0) translateZ(0) scale(1); }
+        }
+        .animate-assemble-left {
+            opacity: 0;
+            transform-style: preserve-3d;
+            animation: assembleLeft 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+        }
+
+        @keyframes assembleCenter {
+            0% { opacity: 0; transform: translateY(150px) translateZ(50px) scale(0.9); }
+            100% { opacity: 1; transform: translateY(0) translateZ(0) scale(1); }
+        }
+        .animate-assemble-center {
+            opacity: 0;
+            transform-style: preserve-3d;
+            animation: assembleCenter 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards;
+        }
+
+        @keyframes assembleRight {
+            0% { opacity: 0; transform: translateX(150px) translateZ(-50px) scale(0.9); }
+            100% { opacity: 1; transform: translateX(0) translateZ(0) scale(1); }
+        }
+        .animate-assemble-right {
+            opacity: 0;
+            transform-style: preserve-3d;
+            animation: assembleRight 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards;
+        }
+
+        /* Immersive Weather (Rain) */
+        .weather-rain {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 50;
+            overflow: hidden;
+            border-radius: 2.5rem;
+            opacity: 0;
+            transition: opacity 2s ease;
+        }
+        .weather-rain.active { opacity: 1; }
+        .drop {
+            position: absolute;
+            bottom: 100%;
+            width: 2px;
+            height: 40px;
+            pointer-events: none;
+            animation: drop 0.5s linear infinite;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.4));
+        }
+        @keyframes drop {
+            0% { transform: translateY(0vh); }
+            100% { transform: translateY(100vh); }
         }
 
         .level-line {

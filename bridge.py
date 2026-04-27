@@ -95,7 +95,13 @@ def main():
                     notify_status(api_session, "online")
                     last_status = "online"
                     cycle_start_time = time.time()
-                except serial.SerialException:
+                except serial.SerialException as e:
+                    if "Permission denied" in str(e):
+                        print(f"\n[!] AKSES DITOLAK: Tidak ada izin untuk mengakses {detected_port}.")
+                        print(f"    Solusi sementara: Jalankan 'sudo chmod 666 {detected_port}' di terminal lain.")
+                        print(f"    Solusi permanen: Jalankan 'sudo usermod -aG uucp $USER' (lalu logout/login).")
+                        sys.exit(1)
+                        
                     if last_status != "offline":
                         print(f"[-] Connection failed to {detected_port}. Retrying...")
                         try:

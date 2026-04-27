@@ -3,9 +3,9 @@
         
         // --- Configuration ---
         const SENSOR_ELEVATION_MDPL = 14.00; 
-        const SIAGA_1_TMA = 11.50; // mdpl
-        const SIAGA_2_TMA = 11.00; // mdpl
-        const SIAGA_3_TMA = 10.00; // mdpl
+        const SIAGA_1_TMA = 13.00; // mdpl (1 meter dari sensor)
+        const SIAGA_2_TMA = 12.80; // mdpl (1.2 meter dari sensor)
+        const SIAGA_3_TMA = 12.50; // mdpl (1.5 meter dari sensor)
         const MAX_SAMPLES = 40;   
         
         // --- State ---
@@ -125,12 +125,48 @@
                         x: { display: false },
                         y: {
                             beginAtZero: false,
-                            min: 8.0,
+                            min: 12.0,
                             max: 14.0,
                             grid: { color: 'rgba(0,0,0,0.05)' },
                             ticks: { font: { size: 10, family: 'Rajdhani' } }
                         }
                     }
+                }
+            });
+        }
+
+        // --- Sparkline Setup ---
+        const sparklineCtx = document.getElementById('tma-sparkline');
+        let sparklineChart;
+        if(sparklineCtx) {
+            const ctx2 = sparklineCtx.getContext('2d');
+            let grad = ctx2.createLinearGradient(0, 0, 0, 80);
+            grad.addColorStop(0, 'rgba(59, 130, 246, 0.4)');
+            grad.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
+
+            sparklineChart = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        data: chartData,
+                        borderColor: '#60a5fa',
+                        backgroundColor: grad,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { display: false, min: 12.0, max: 14.0 }
+                    },
+                    animation: { duration: 0 }
                 }
             });
         }
@@ -146,9 +182,14 @@
                 attributionControl: false
             });
 
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 maxZoom: 19
             }).addTo(map);
+            
+            // Fix Leaflet rendering bug inside animated/hidden containers
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 1500);
 
             const customIcon = L.divIcon({
                 className: 'custom-marker',
@@ -352,12 +393,26 @@
             }
 
             // UI Data Sync
-            updateText('#current-distance', distFloat.toFixed(2));
+            const distToGround = 100.0 - distFloat; // Logic 1 Meter
+            updateText('#distance-to-ground', distToGround.toFixed(1));
+            updateText('#current-distance', distFloat.toFixed(1));
+            
+            const distEl = document.getElementById('distance-to-ground');
+            if(distEl) {
+                if(distToGround >= 0) {
+                    distEl.classList.remove('text-slate-400');
+                    distEl.classList.add('text-red-500');
+                } else {
+                    distEl.classList.remove('text-red-500');
+                    distEl.classList.add('text-slate-400');
+                }
+            }
+
             updateText('#valid-count-display', `${validCount}/20`);
             updateText('#water-level', tma_mdpl.toFixed(2));
             
-            // Calculate visual percentage (8.00 mdpl = 0%, 14.00 mdpl = 100%)
-            const visualPercent = Math.max(0, Math.min(100, ((tma_mdpl - 8.0) / 6.0) * 100));
+            // Calculate visual percentage (12.00 mdpl = 0%, 13.00 mdpl = 100% - Skala Simulasi 1 Meter)
+            const visualPercent = Math.max(0, Math.min(100, ((tma_mdpl - 12.0) / 1.0) * 100));
             updateText('#water-percent', `${visualPercent.toFixed(0)}%`);
 
             if(_signalBar) _signalBar.style.width = `${(validCount/20)*100}%`;
@@ -366,13 +421,6 @@
             if(_riverWater) {
                 const visualFill = Math.max(8, visualPercent);
                 _riverWater.style.height = `${visualFill}%`;
-                let r=14, g=165, b=233;
-                if(tma_mdpl >= SIAGA_1_TMA) { r=239; g=68; b=68; }
-                else if(tma_mdpl >= SIAGA_2_TMA) { r=249; g=115; b=22; }
-                else if(tma_mdpl >= SIAGA_3_TMA) { r=234; g=179; b=8; }
-                _riverWater.style.setProperty('--r', r);
-                _riverWater.style.setProperty('--g', g);
-                _riverWater.style.setProperty('--b', b);
             }
 
             // Sentinel Health Sync
@@ -446,16 +494,56 @@
             if (previousDepth > 0) {
                 const delta = tma_mdpl - previousDepth;
                 updateText('#flow-velocity', Math.abs(delta).toFixed(2));
-                updateText('#eta-overflow', predictETA(tma_mdpl) || 'STABLE');
+                const etaText = predictETA(tma_mdpl) || 'STABLE';
+                updateText('#eta-overflow', etaText);
+                
+                const etaCard = document.getElementById('eta-card');
+                const etaIcon = document.getElementById('eta-icon');
+                const etaWrapper = document.getElementById('eta-icon-wrapper');
+                const etaLabel = document.getElementById('eta-label');
+                if(etaCard) {
+                    if(etaText === 'STABLE' || etaText.includes('>1 Jam')) {
+                        etaCard.className = 'col-span-2 rounded-3xl p-5 bg-white border border-slate-100 shadow-xl flex items-center justify-between relative overflow-hidden group';
+                        if(etaWrapper) etaWrapper.className = 'h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100 relative z-10';
+                        if(etaIcon) etaIcon.className = 'fa-solid fa-shield-check text-blue-500';
+                        if(etaLabel) etaLabel.className = 'text-[9px] text-blue-500 font-black mb-1 uppercase tracking-[0.2em]';
+                    } else if(etaText === 'IMMINENT') {
+                        etaCard.className = 'col-span-2 rounded-3xl p-5 bg-red-50 border border-red-100 shadow-lg shadow-red-500/20 flex items-center justify-between relative overflow-hidden group animate-pulse';
+                        if(etaWrapper) etaWrapper.className = 'h-10 w-10 rounded-full bg-red-100 flex items-center justify-center border border-red-200 relative z-10';
+                        if(etaIcon) etaIcon.className = 'fa-solid fa-skull-crossbones text-red-500 animate-bounce';
+                        if(etaLabel) etaLabel.className = 'text-[9px] text-red-500 font-black mb-1 uppercase tracking-[0.2em]';
+                    } else {
+                        etaCard.className = 'col-span-2 rounded-3xl p-5 bg-orange-50 border border-orange-100 shadow-lg shadow-orange-500/20 flex items-center justify-between relative overflow-hidden group';
+                        if(etaWrapper) etaWrapper.className = 'h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center border border-orange-200 relative z-10';
+                        if(etaIcon) etaIcon.className = 'fa-solid fa-stopwatch text-orange-500';
+                        if(etaLabel) etaLabel.className = 'text-[9px] text-orange-500 font-black mb-1 uppercase tracking-[0.2em]';
+                    }
+                }
+                
+                const vCont = document.getElementById('velocity-container');
+                const vIcon = document.getElementById('velocity-icon');
+                if(vCont && vIcon) {
+                    if(delta > 0) {
+                        vCont.className = 'flex items-baseline text-red-500 transition-colors';
+                        vIcon.className = 'fa-solid fa-arrow-up text-xs mr-1 animate-bounce';
+                    } else if(delta < 0) {
+                        vCont.className = 'flex items-baseline text-emerald-500 transition-colors';
+                        vIcon.className = 'fa-solid fa-arrow-down text-xs mr-1';
+                    } else {
+                        vCont.className = 'flex items-baseline text-blue-500 transition-colors';
+                        vIcon.className = 'fa-solid fa-arrow-right text-xs mr-1';
+                    }
+                }
             }
             previousDepth = tma_mdpl;
 
             // Update Graphical HUD
-            if(depthChart) {
+            if(depthChart || sparklineChart) {
                 const t = new Date().toLocaleTimeString('en-US', {hour12:false});
                 chartData.push(tma_mdpl); chartLabels.push(t);
                 if (chartData.length > MAX_SAMPLES) { chartData.shift(); chartLabels.shift(); }
-                depthChart.update();
+                if(depthChart) depthChart.update();
+                if(sparklineChart) sparklineChart.update();
             }
 
             // Trend Matrix Logic (Hourly snapshots)
@@ -510,7 +598,7 @@
             trendData24h.forEach(i => {
                 const b = document.createElement('div');
                 b.className = 'flex-1 rounded-full';
-                const percent = Math.max(0, Math.min(100, ((i.d - 8.0) / 6.0) * 100));
+                const percent = Math.max(0, Math.min(100, ((i.d - 12.0) / 1.0) * 100));
                 b.style.height = `${Math.max(10, percent)}%`;
                 b.style.backgroundColor = i.d >= SIAGA_2_TMA ? '#f97316' : '#3b82f6';
                 el.appendChild(b);

@@ -42,4 +42,54 @@ class DeviceController extends Controller
             'longitude' => $device->longitude,
         ]);
     }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'type' => 'required|string|max:255',
+            'location' => 'nullable|string|max:255',
+            'serial_number' => 'required|string|unique:devices,serial_number|max:255',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+        ]);
+
+        $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']) . '-' . uniqid();
+        $validated['status'] = 'offline';
+
+        Device::create($validated);
+
+        return redirect()->back()->with('success', 'Perangkat berhasil ditambahkan!');
+    }
+
+    public function update(Request $request, $id)
+    {
+        $device = Device::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'type' => 'required|string|max:255',
+            'location' => 'nullable|string|max:255',
+            'serial_number' => 'required|string|unique:devices,serial_number,'.$id.'|max:255',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+            'status' => 'required|string|in:online,offline,maintenance'
+        ]);
+
+        if ($request->name !== $device->name) {
+            $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']) . '-' . uniqid();
+        }
+
+        $device->update($validated);
+
+        return redirect()->back()->with('success', 'Data perangkat berhasil diperbarui!');
+    }
+
+    public function destroy($id)
+    {
+        $device = Device::findOrFail($id);
+        $device->delete();
+
+        return redirect()->back()->with('success', 'Perangkat berhasil dihapus!');
+    }
 }

@@ -25,20 +25,20 @@
             </div>
             <div class="hidden md:block w-px h-16 bg-gradient-to-b from-transparent via-slate-200 to-transparent"></div>
             <div class="text-center md:text-right">
-                <h3 class="text-sm text-slate-500 font-medium mb-1 uppercase tracking-widest text-[10px]">Jarak Udara</h3>
+                <h3 class="text-sm text-slate-500 font-medium mb-1 uppercase tracking-widest text-[10px]">Jarak ke Luber</h3>
                 <div class="flex items-baseline justify-center md:justify-end">
-                    <span id="current-distance" class="text-4xl font-bold text-slate-400 odometer leading-none font-rajdhani">--</span>
+                    <span id="distance-to-ground" class="text-4xl font-bold text-slate-400 odometer leading-none font-rajdhani">--</span>
                     <span class="text-lg text-slate-400 ml-1">cm</span>
                 </div>
+                <div class="text-[9px] text-slate-300 font-medium uppercase mt-1">Jarak Sensor: <span id="current-distance">--</span> cm</div>
             </div>
         </div>
     </div>
 
     <!-- Animated River View Section -->
-    <div class="glass-panel rounded-[3rem] p-4 flex-1 relative group min-h-[500px] bg-slate-50 shadow-inner">
-        <div class="river-container border-2 border-slate-200/50 shadow-2xl relative">
-            <div class="river-bank-left"></div>
-            <div class="river-bank-right"></div>
+    <!-- Animated River View Section -->
+    <div class="glass-panel rounded-[3rem] p-4 flex-1 relative group bg-slate-50/50 shadow-inner">
+        <div class="glass-tank-container relative w-full min-h-[350px]">
             
             <!-- Accessibility Zone Patterns -->
             <div class="absolute inset-x-0 bottom-0 z-0 flex flex-col-reverse h-full pointer-events-none rounded-[2rem] overflow-hidden">
@@ -47,12 +47,25 @@
                 <div class="pattern-overlay pattern-siaga3 h-[16.7%]" style="bottom: 33.3%"></div>
             </div>
             
-            <!-- Water Layer (Clip Path used to avoid global overflow hidden) -->
-            <div class="river-water" id="river-water" style="height: 0%; z-index: 10; border-bottom-left-radius: 1.8rem; border-bottom-right-radius: 1.8rem; overflow: hidden;">
-                <div class="absolute inset-0 bg-blue-900/5 mix-blend-overlay"></div>
+            <!-- Water Layer -->
+            <div class="liquid-water" id="river-water" style="height: 0%;">
+                
+                <!-- SVG Waves -->
+                <div class="wave-back">
+                    <svg class="animate-wave-slow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
+                        <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V95.8C59.71,118.08,130.83,119.56,189.7,100.8,236.4,85.87,281.42,71.21,321.39,56.44Z"></path>
+                    </svg>
+                </div>
+                <div class="wave-surface">
+                    <svg class="animate-wave-fast" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
+                        <path d="M985.66,92.83C906.67,72,823.78,31,743.84,14.19c-82.26-17.34-168.06-16.33-250.45.39-57.84,11.73-114,31.07-172,41.86A600.21,600.21,0,0,1,0,27.35V120H1200V95.8C1132.19,118.92,1055.71,111.31,985.66,92.83Z"></path>
+                    </svg>
+                </div>
+
+                <div class="absolute inset-0 bg-white/5 mix-blend-overlay"></div>
                 <!-- Dynamic Percent Label -->
                 <div id="water-percent-container" class="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center transition-all duration-700 pointer-events-none">
-                    <div id="water-percent" class="text-8xl font-black text-white/5 uppercase tracking-tighter mix-blend-overlay transition-all duration-500">0%</div>
+                    <div id="water-percent" class="text-8xl font-black text-white/10 uppercase tracking-tighter mix-blend-overlay transition-all duration-500">0%</div>
                 </div>
             </div>
 
@@ -65,10 +78,10 @@
             <!-- Foreground Overlays (High Contrast) -->
             <div class="absolute inset-0 z-40 pointer-events-none">
                 <!-- Vertical Scale Ruler -->
-                @for($i = 0; $i <= 600; $i += 50)
+                @for($i = 0; $i <= 200; $i += 50)
                     @php 
-                        $bottomPercent = ($i / 600) * 100; 
-                        $tmaValue = 8.00 + ($i / 100);
+                        $bottomPercent = ($i / 200) * 100; 
+                        $tmaValue = 12.00 + ($i / 100);
                     @endphp
                     @if($i % 100 == 0)
                         <div class="absolute right-0 left-0 h-px bg-slate-900/[0.08]" style="bottom: {{ $bottomPercent }}%"></div>

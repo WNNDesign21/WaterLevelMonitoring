@@ -1,0 +1,44 @@
+Panduan Menjalankan Sistem Monitoring Level Air (Water Level Monitoring)
+======================================================================
+
+Untuk menjalankan sistem ini secara penuh (Website, Real-time WebSocket, Frontend, dan Sensor Arduino), Anda perlu membuka 4 (empat) jendela Terminal/Command Prompt secara terpisah.
+
+Pastikan Anda sudah berada di direktori project: 
+/home/wnnrmnsyh/Dokumen/Development/Water Level Monitoring
+
+Berikut adalah langkah-langkah dan perintah yang harus dijalankan:
+
+---
+
+1. TERMINAL 1: Menjalankan Server Web Laravel
+Tugas: Menjalankan aplikasi web utama agar bisa diakses di browser.
+Perintah:
+php artisan serve
+(Setelah jalan, website bisa diakses di http://127.0.0.1:8000)
+
+---
+
+2. TERMINAL 2: Menjalankan Server WebSocket (Reverb)
+Tugas: Menangani komunikasi real-time agar dashboard bisa update otomatis tanpa perlu refresh halaman.
+Perintah:
+php artisan reverb:start --port=8081
+
+---
+
+3. TERMINAL 3: Menjalankan Vite (Frontend Assets)
+Tugas: Melakukan kompilasi aset frontend seperti TailwindCSS dan JavaScript secara real-time.
+Perintah:
+npm run dev
+
+---
+
+4. TERMINAL 4: Menjalankan Bridge Python (Koneksi Arduino - Laravel)
+Tugas: Membaca data sensor ultrasonik dari Arduino melalui Serial Port (USB) dan mengirimkannya ke aplikasi web secara terus menerus.
+Perintah:
+python bridge.py
+(Atau gunakan `python3 bridge.py` tergantung konfigurasi Python Anda. Pastikan Arduino sudah terhubung ke USB komputer sebelum menjalankan perintah ini)
+
+---
+
+KESIMPULAN:
+Jika keempat perintah di atas sudah berjalan (tanpa ada error di terminal), maka sistem sudah siap digunakan! Buka browser Anda dan kunjungi http://127.0.0.1:8000 untuk melihat dashboard monitoring secara real-time.

@@ -9,6 +9,16 @@
         </div>
     </div>
     <div class="flex items-center space-x-4">
+        <!-- Mode Switcher -->
+        <div class="flex bg-slate-100 p-1 rounded-xl shadow-inner border border-slate-200">
+            <a href="{{ route('user.dashboard') }}" class="px-3 py-1.5 rounded-lg text-xs font-bold tracking-wider transition-all {{ request()->routeIs('user.dashboard') ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700' }}">
+                <i class="fa-solid fa-user mr-1"></i> USER
+            </a>
+            <a href="{{ route('it.dashboard') }}" class="px-3 py-1.5 rounded-lg text-xs font-bold tracking-wider transition-all {{ request()->routeIs('it.dashboard') ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700' }}">
+                <i class="fa-solid fa-microchip mr-1"></i> IT
+            </a>
+        </div>
+
         <a href="{{ route('devices.index') }}" class="flex items-center px-4 py-2 rounded-xl bg-slate-900 text-white shadow-lg shadow-slate-900/20 hover:bg-blue-600 transition-all text-xs font-bold tracking-widest group">
             <i class="fa-solid fa-server mr-2 opacity-50 group-hover:opacity-100"></i> MANAJEMEN PERANGKAT
         </a>
