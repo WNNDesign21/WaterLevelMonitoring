@@ -48,7 +48,7 @@
                                 <div class="p-2 space-y-1">
                                     @if(isset($allDevices) && count($allDevices) > 0)
                                         @foreach($allDevices as $device)
-                                        <button type="button" onclick="userSwitchDevice('{{ $device->slug }}', '{{ addslashes($device->name) }}', '{{ addslashes($device->location) }}')" class="w-full text-left p-3 rounded-xl hover:bg-blue-50/80 transition-colors flex items-center space-x-3 group/item">
+                                        <button type="button" onclick="userSwitchDevice('{{ $device->slug }}', '{{ addslashes($device->name) }}', '{{ addslashes($device->location) }}', {{ $device->latitude ?? -6.2088 }}, {{ $device->longitude ?? 106.8456 }})" class="w-full text-left p-3 rounded-xl hover:bg-blue-50/80 transition-colors flex items-center space-x-3 group/item">
                                             <div class="w-2 h-2 rounded-full {{ $device->status === 'online' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500' }} shrink-0"></div>
                                             <div class="flex-1 overflow-hidden">
                                                 <div class="text-xs font-bold text-slate-800 truncate group-hover/item:text-blue-600 transition-colors">{{ $device->name }}</div>
@@ -303,7 +303,7 @@
             }
         });
 
-        function userSwitchDevice(slug, name, location) {
+        function userSwitchDevice(slug, name, location, lat, lng) {
             // Update UI Title
             document.getElementById('active-device-name').textContent = name;
             
@@ -312,7 +312,7 @@
             
             // Panggil switchDevice bawaan scripts.blade.php
             if(typeof window.switchDevice === 'function') {
-                window.switchDevice(slug, name);
+                window.switchDevice(slug, name, lat, lng);
                 
                 // Update URL parameter silently for shareability
                 window.history.pushState({}, '', '/dashboard/' + slug);

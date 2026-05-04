@@ -5,7 +5,7 @@
 // ================= KONFIGURASI =================
 const char *ssid = "OPPO K3";
 const char *password = "12312345";
-const char *serverName = "http://10.178.144.143:8000/api/sensor-data";
+const char *serverName = "http://103.172.205.35/api/sensor-data";
 const String deviceSlug = "node-mcu-cp2102-johar-69f819289fa67";
 // ===============================================
 

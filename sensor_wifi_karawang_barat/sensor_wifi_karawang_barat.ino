@@ -5,7 +5,7 @@
 // ================= KONFIGURASI =================
 const char *ssid = "OPPO K3";
 const char *password = "12312345";
-const char *serverName = "http://10.178.144.143:8000/api/sensor-data";
+const char *serverName = "http://103.172.205.35/api/sensor-data";
 const String deviceSlug = "node-wifi-wemos-d1-69f01e5649f84";
 // ===============================================
 
@@ -41,6 +41,9 @@ void loop() {
   http.begin(client, serverName);
   http.addHeader("Content-Type", "application/json");
   String json = "{\"device_slug\":\"" + deviceSlug + "\", \"distance\":" + String(distance) + ", \"valid_count\": 1}";
+  
+  Serial.print("Target: "); Serial.println(serverName);
+  Serial.print("Payload: "); Serial.println(json);
   
   int code = http.POST(json);
   Serial.print("Kirim "); Serial.print(distance); 
