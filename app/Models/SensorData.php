@@ -10,6 +10,7 @@ class SensorData extends Model
     use HasFactory;
 
     protected $fillable = [
+        'device_id',
         'distance',
         'valid_count',
     ];

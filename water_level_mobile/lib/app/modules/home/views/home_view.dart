@@ -410,8 +410,12 @@ class HomeView extends GetView<HomeController> {
   }
 
   Widget _buildRiverVisualizer(BuildContext context) {
-    double minMdpl = 12.0; // 2 Meter dari sensor (Kosong)
-    double maxMdpl = 13.0; // 1 Meter dari sensor (Penuh/Luber)
+    // Hitung Skala Dinamis (0% dan 100%)
+    // 100% (Penuh) = elevationMdpl - (sensorToBank / 100)
+    // 0% (Kosong) = elevationMdpl - ((sensorToBank + riverDepth) / 100)
+    double maxMdpl = controller.elevationMdpl.value - (controller.sensorToBank.value / 100.0);
+    double minMdpl = maxMdpl - (controller.riverDepth.value / 100.0);
+    
     double currentMdpl = controller.waterLevel.value;
     double fillPercentage = ((currentMdpl - minMdpl) / (maxMdpl - minMdpl)).clamp(0.0, 1.0);
 
@@ -433,7 +437,7 @@ class HomeView extends GetView<HomeController> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: List.generate(7, (index) {
-                    double val = 14.0 - index;
+                    double val = controller.elevationMdpl.value - index;
                     return Row(
                       children: [
                         const SizedBox(width: 24),

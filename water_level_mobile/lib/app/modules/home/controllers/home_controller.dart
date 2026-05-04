@@ -22,6 +22,11 @@ class HomeController extends GetxController {
   var etaOverflow = '-- Menit'.obs;
   var distanceToGround = 0.0.obs; // Jarak air relatif ke tanah/tanggul
   var isOnline = false.obs;
+  
+  // Calibration Config (Dynamic from API)
+  var elevationMdpl = 14.0.obs;
+  var sensorToBank = 100.0.obs; // cm
+  var riverDepth = 100.0.obs;    // cm
   String _lastNotifiedStatus = 'AMAN';
   final AudioPlayer _audioPlayer = AudioPlayer();
   var isAlarmMuted = false.obs;
@@ -51,14 +56,33 @@ class HomeController extends GetxController {
         distance.value = (data['distance'] != null) ? double.parse(data['distance'].toString()) : 0.0;
         validCount.value = data['valid_count'] ?? 0;
         lastUpdated.value = data['created_at'] ?? '';
-        isOnline.value = true;
         
+        // Pengecekan data basi (Heartbeat)
+        if (data['created_at'] != null) {
+            DateTime lastSeen = DateTime.parse(data['created_at']);
+            // Pastikan perbandingan waktu akurat (Server biasanya UTC)
+            if (DateTime.now().toUtc().difference(lastSeen).inSeconds > 30) {
+                isOnline.value = false;
+            } else {
+                isOnline.value = true;
+            }
+        } else {
+            isOnline.value = false;
+        }
+        
+        // Update Configuration from API
+        if (response['config'] != null) {
+          elevationMdpl.value = double.parse(response['config']['elevation_mdpl'].toString());
+          sensorToBank.value = double.parse(response['config']['sensor_to_bank'].toString());
+          riverDepth.value = double.parse(response['config']['river_depth'].toString());
+        }
+
         // Kalkulasi tinggi air (MDPL)
-        waterLevel.value = 14.0 - (distance.value / 100.0);
+        waterLevel.value = elevationMdpl.value - (distance.value / 100.0);
         
-        // Kalkulasi Jarak ke Tanah (Tanggul) untuk Simulasi Presentasi
-        // Jarak sensor ke tanah ditetapkan 1 meter (100cm)
-        distanceToGround.value = 100.0 - distance.value;
+        // Kalkulasi Jarak ke Tanah (Tanggul)
+        // Jika hasil positif, berarti air sudah di atas bantaran (Banjir)
+        distanceToGround.value = sensorToBank.value - distance.value;
 
         // Update Status Siaga
         _updateStatusSiaga();
@@ -76,16 +100,18 @@ class HomeController extends GetxController {
     }
   }
 
-  void _updateStatusSiaga() {
-    // Threshold baru untuk PRESENTASI (Relatif terhadap 1 meter dari sensor)
-    // Jika MDPL >= 13.00, berarti air sudah sejajar tanah (14.0 - 1.0)
-    if (waterLevel.value >= 13.00) {
+    // Threshold Dinamis berdasarkan Kalibrasi
+    // Siaga 1: Air sudah menyentuh bantaran (distanceToGround >= 0)
+    // Siaga 2: Air 20cm di bawah bantaran
+    // Siaga 3: Air 50cm di bawah bantaran
+
+    if (distanceToGround.value >= 0) {
       statusSiaga.value = 'SIAGA 1';
       statusColor.value = 0xFFEF4444; // Red
-    } else if (waterLevel.value >= 12.80) {
+    } else if (distanceToGround.value >= -20) {
       statusSiaga.value = 'SIAGA 2';
       statusColor.value = 0xFFF59E0B; // Amber
-    } else if (waterLevel.value >= 12.50) {
+    } else if (distanceToGround.value >= -50) {
       statusSiaga.value = 'SIAGA 3';
       statusColor.value = 0xFF3B82F6; // Blue
     } else {

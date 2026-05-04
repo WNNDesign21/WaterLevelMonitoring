@@ -15,13 +15,21 @@ class SensorDataReceived implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $sensorData;
+    public $config;
+    public $slug;
 
     /**
      * Create a new event instance.
      */
-    public function __construct($sensorData)
+    public function __construct($sensorData, $device)
     {
         $this->sensorData = $sensorData;
+        $this->slug = $device->slug;
+        $this->config = [
+            'elevation_mdpl' => $device->elevation_mdpl ?? 14.00,
+            'sensor_to_bank' => $device->sensor_to_bank ?? 100,
+            'river_depth' => $device->river_depth ?? 100,
+        ];
     }
 
     /**
@@ -32,7 +40,8 @@ class SensorDataReceived implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new Channel('sensor-data'),
+            new Channel('sensor-data.' . $this->slug),
+            new Channel('sensor-data'), // Keep backward compatibility if needed
         ];
     }
 

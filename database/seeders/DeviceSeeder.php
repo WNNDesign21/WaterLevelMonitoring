@@ -23,6 +23,9 @@ class DeviceSeeder extends Seeder
             'image_path' => 'devices/ultrasonic_main.png',
             'latitude' => -6.2088000,
             'longitude' => 106.8456000,
+            'elevation_mdpl' => 14.00,
+            'sensor_to_bank' => 100, // 1 Meter
+            'river_depth' => 100,    // 1 Meter
             'specs' => [
                 'Range' => '20cm - 450cm',
                 'Precision' => '±2mm',

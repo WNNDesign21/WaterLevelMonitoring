@@ -1,4 +1,4 @@
-<script>
+
     document.addEventListener('DOMContentLoaded', () => {
         
         // --- Configuration ---
@@ -13,8 +13,8 @@
         let chartLabels = Array(MAX_SAMPLES).fill('');
         let previousDepth = 0;
         let lastRainIntensity = 0;
-        let currentLat = {{ $primaryDevice->latitude ?? -6.2088 }};
-        let currentLng = {{ $primaryDevice->longitude ?? 106.8456 }};
+        let currentLat = -6.2088;
+        let currentLng = 106.8456;
         
         let depthBuffer = []; 
         let lastVoiceTime = 0;
@@ -32,14 +32,14 @@
 
         // --- Echo / WebSocket Initialization ---
         let echoInstance = null;
-        let currentDeviceSlug = '{{ $primaryDevice->slug ?? "cybernova-s400-primary" }}';
+        let currentDeviceSlug = 'node-wifi-wemos-d1-69f01e5649f84';
         
         if(typeof Echo !== 'undefined') {
             echoInstance = new Echo({
                 broadcaster: 'reverb',
-                key: '{{ env('REVERB_APP_KEY') }}',
+                key: 'cl6l6oxwd2etafao2rgy',
                 wsHost: window.location.hostname || '127.0.0.1',
-                wsPort: {{ env('REVERB_PORT', 8081) }},
+                wsPort: 8081,
                 forceTLS: false,
                 encrypted: false,
                 enabledTransports: ['ws', 'wss'],
@@ -72,19 +72,11 @@
                         updateDashboard({ data: e.sensorData, config: e.config });
                     }
                 });
+                });
                 
             // Expose switchDevice globally
-            window.switchDevice = function(slug, name) {
+            window.switchDevice = function(slug) {
                 if(currentDeviceSlug === slug) return;
-                
-                // Update active device badge
-                if(name) {
-                    const badge = document.getElementById('active-device-name');
-                    if(badge) {
-                        badge.textContent = name;
-                        badge.title = name;
-                    }
-                }
                 
                 // Leave old channel
                 echoInstance.leave('sensor-data.' + currentDeviceSlug);
@@ -309,7 +301,7 @@
         }
 
         async function updateWeather(lat, lng) {
-            const WEATHER_KEY = "{{ env('OPENWEATHER_API_KEY') }}";
+            const WEATHER_KEY = "9453a77993dad3f98101aac939ab1e2a";
             
             // 1. Resolve Location (Non-blocking but aware)
             const locationPromise = resolveLocation(lat, lng);
@@ -403,8 +395,8 @@
             const config = response.config || { elevation_mdpl: 14.0, sensor_to_bank: 100, river_depth: 100 };
             
             // Check Data Freshness (Heartbeat Check)
-            // Ambil waktu lokal browser sebagai referensi dinamis
-            const serverTime = Date.now(); 
+            // Ambil waktu server saat ini dari blade (PHP) sebagai referensi
+            const serverTime = 1777346567 * 1000; 
             const lastDataTime = new Date(data.created_at).getTime();
             const diffSeconds = (serverTime - lastDataTime) / 1000;
             
@@ -417,10 +409,6 @@
                 console.warn('STALE DATA DETECTED. Clearing UI...');
                 updateText('#water-level', '--');
                 updateText('#water-percent', 'OFF');
-                
-                const _waterVisual = document.getElementById('river-water');
-                if(_waterVisual) _waterVisual.style.height = '0%';
-                
                 updateText('#current-distance', '--');
                 updateText('#distance-to-ground', '--');
                 updateText('#flow-velocity', '0.00');
@@ -712,46 +700,6 @@
         setInterval(() => updateWeather(currentLat, currentLng), 600000);
     });
     // CALIBRATION LOGIC
-    function updateCalibrationVisualizer() {
-        const gapVal = parseFloat(document.getElementById('input_sensor_to_bank')?.value) || 0;
-        const tankVal = parseFloat(document.getElementById('input_river_depth')?.value) || 0;
-        const elevVal = parseFloat(document.getElementById('input_elevation')?.value) || 0;
-
-        const visGapVal = document.getElementById('vis-gap-val');
-        const visTankVal = document.getElementById('vis-tank-val');
-        const visElevVal = document.getElementById('vis-elevation-val');
-        
-        if(visGapVal) visGapVal.textContent = gapVal;
-        if(visTankVal) visTankVal.textContent = tankVal;
-        if(visElevVal) visElevVal.textContent = elevVal.toFixed(2);
-
-        // Kalkulasi tinggi proporsional (total tinggi maksimal visualizer = 250px)
-        const total = gapVal + tankVal;
-        let gapHeight = 50;
-        let tankHeight = 100;
-        
-        if (total > 0) {
-            const minPx = 40; // Batas minimal agar kotak tidak hilang
-            const availablePx = 250 - (minPx * 2);
-            
-            gapHeight = minPx + (gapVal / total) * availablePx;
-            tankHeight = minPx + (tankVal / total) * availablePx;
-        }
-
-        const gapContainer = document.getElementById('vis-gap-container');
-        const tankContainer = document.getElementById('vis-tank-container');
-        if(gapContainer) gapContainer.style.height = `${gapHeight}px`;
-        if(tankContainer) tankContainer.style.height = `${tankHeight}px`;
-    }
-
-    // Attach listener ke form inputs
-    document.addEventListener('DOMContentLoaded', () => {
-        ['input_sensor_to_bank', 'input_river_depth', 'input_elevation'].forEach(id => {
-            const el = document.getElementById(id);
-            if(el) el.addEventListener('input', updateCalibrationVisualizer);
-        });
-    });
-
     function openCalibrationModal(device) {
         const modal = document.getElementById('calibrationModal');
         modal.classList.remove('hidden');
@@ -761,9 +709,6 @@
         document.getElementById('input_elevation').value = device.elevation_mdpl || 14.00;
         document.getElementById('input_sensor_to_bank').value = device.sensor_to_bank || 100;
         document.getElementById('input_river_depth').value = device.river_depth || 100;
-        
-        // Render visualizer
-        updateCalibrationVisualizer();
     }
 
     function closeCalibrationModal() {
@@ -784,14 +729,14 @@
             elevation_mdpl: formData.get('elevation_mdpl'),
             sensor_to_bank: formData.get('sensor_to_bank'),
             river_depth: formData.get('river_depth'),
-            _token: '{{ csrf_token() }}'
+            _token: 'vFhmXGeONB8Ay6AeCp5hqhJK9aDyk0pOgd3Nyt8H'
         };
 
         fetch('/api/device/update-config', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'X-CSRF-TOKEN': 'vFhmXGeONB8Ay6AeCp5hqhJK9aDyk0pOgd3Nyt8H'
             },
             body: JSON.stringify(data)
         })
@@ -809,18 +754,6 @@
                     btn.classList.add('bg-slate-900');
                     btn.classList.remove('bg-emerald-500');
                     btn.disabled = false;
-
-                    // Memperbarui UI tanpa refresh jika sedang memantau device yang dikalibrasi
-                    if (typeof currentDeviceSlug !== 'undefined' && data.device_slug === currentDeviceSlug) {
-                        if (typeof pollTelemetry === 'function') {
-                            pollTelemetry(); // Tarik ulang data dan config terbaru untuk update visual
-                        }
-                    }
-
-                    // Refresh halaman khusus IT Dashboard agar data di tombol modal ikut ter-update
-                    if (window.location.pathname.includes('/it')) {
-                        window.location.reload();
-                    }
                 }, 1500);
             }
         })
@@ -830,4 +763,3 @@
             btn.disabled = false;
         });
     });
-</script>

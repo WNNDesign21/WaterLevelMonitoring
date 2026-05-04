@@ -76,9 +76,8 @@ class DeviceController extends Controller
             'status' => 'required|string|in:online,offline,maintenance'
         ]);
 
-        if ($request->name !== $device->name) {
-            $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']) . '-' . uniqid();
-        }
+        // Slug sengaja TIDAK diubah meskipun nama berubah.
+        // Jika slug berubah, perangkat keras (NodeMCU/Wemos) akan terputus karena ID-nya tertanam di dalam chip.
 
         $device->update($validated);
 

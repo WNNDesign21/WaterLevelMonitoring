@@ -19,10 +19,14 @@
                     <p class="text-[10px] font-mono text-cyan-600 tracking-[0.3em] uppercase">Analitik Sistem & Telemetri Lanjutan</p>
                 </div>
             </div>
-            <div class="mt-4 md:mt-0 flex items-center space-x-4">
+            <div class="mt-4 md:mt-0 flex flex-wrap items-center gap-3">
+                <div class="flex items-center space-x-2 bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg shadow-sm">
+                    <i class="fa-solid fa-satellite-dish text-cyan-400 text-[10px] animate-pulse"></i>
+                    <span id="active-device-name" class="text-[9px] font-bold text-white uppercase tracking-widest truncate max-w-[150px] sm:max-w-[200px]" title="{{ $primaryDevice->name ?? 'MEMUAT...' }}">{{ $primaryDevice->name ?? 'MEMUAT...' }}</span>
+                </div>
                 <div class="flex items-center space-x-2 bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span class="text-[9px] font-mono text-slate-600">WS_TERHUBUNG</span>
+                    <span id="connection-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span id="connection-text" class="text-[9px] font-mono text-slate-600 uppercase tracking-widest">WS_TERHUBUNG</span>
                 </div>
                 <a href="{{ route('user.dashboard') }}" class="text-[10px] font-black text-slate-500 hover:text-cyan-600 transition-colors uppercase tracking-widest border border-slate-200 hover:border-cyan-300 px-4 py-2 rounded-lg bg-white shadow-sm">
                     Tampilan Publik <i class="fa-solid fa-arrow-right ml-1"></i>
@@ -45,17 +49,17 @@
             <div class="bg-white border border-slate-100 rounded-xl p-3 flex flex-col justify-center relative overflow-hidden group hover:border-slate-300 transition-colors shadow-sm">
                 <div class="absolute -right-2 -bottom-2 opacity-5 group-hover:opacity-10 transition-opacity"><i class="fa-solid fa-bolt text-4xl"></i></div>
                 <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Tegangan Node</span>
-                <span class="text-sm font-mono text-amber-500">5.02 V</span>
+                <span class="text-sm font-mono text-amber-500" id="it-voltage">5.02 V</span>
             </div>
             <div class="bg-white border border-slate-100 rounded-xl p-3 flex flex-col justify-center relative overflow-hidden group hover:border-slate-300 transition-colors shadow-sm">
                 <div class="absolute -right-2 -bottom-2 opacity-5 group-hover:opacity-10 transition-opacity"><i class="fa-solid fa-users text-4xl"></i></div>
                 <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Koneksi Aktif</span>
-                <span class="text-sm font-mono text-blue-500">1,204</span>
+                <span class="text-sm font-mono text-blue-500" id="it-connections">1,204</span>
             </div>
             <div class="bg-white border border-slate-100 rounded-xl p-3 flex flex-col justify-center relative overflow-hidden group hover:border-slate-300 transition-colors shadow-sm">
                 <div class="absolute -right-2 -bottom-2 opacity-5 group-hover:opacity-10 transition-opacity"><i class="fa-solid fa-memory text-4xl"></i></div>
                 <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Penggunaan Memori</span>
-                <span class="text-sm font-mono text-slate-600">42.8 GB / 64.0 GB</span>
+                <span class="text-sm font-mono text-slate-600" id="it-memory">42.8 GB / 64.0 GB</span>
             </div>
             <div class="bg-white border border-slate-100 rounded-xl p-3 flex flex-col justify-center relative overflow-hidden group hover:border-slate-300 transition-colors shadow-sm">
                 <div class="absolute -right-2 -bottom-2 opacity-5 group-hover:opacity-10 transition-opacity"><i class="fa-solid fa-database text-4xl"></i></div>
@@ -80,46 +84,48 @@
                         <div>
                             <div class="flex justify-between text-[10px] mb-1.5 font-mono">
                                 <span class="text-slate-500">SUHU_CPU</span>
-                                <span class="text-amber-500 font-bold">48.5°C</span>
+                                <span class="text-amber-500 font-bold" id="it-cpu-temp">48.5°C</span>
                             </div>
                             <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                                <div class="bg-gradient-to-r from-amber-400 to-amber-300 h-1.5 rounded-full" style="width: 48%"></div>
+                                <div id="it-cpu-bar" class="bg-gradient-to-r from-amber-400 to-amber-300 h-1.5 rounded-full transition-all duration-500" style="width: 48%"></div>
                             </div>
                         </div>
                         <div>
                             <div class="flex justify-between text-[10px] mb-1.5 font-mono">
                                 <span class="text-slate-500">RUGI_PAKET</span>
-                                <span class="text-emerald-500 font-bold">0.00%</span>
+                                <span class="text-emerald-500 font-bold" id="it-packet-loss">0.00%</span>
                             </div>
                             <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                                <div class="bg-gradient-to-r from-emerald-400 to-emerald-300 h-1.5 rounded-full" style="width: 100%"></div>
+                                <div id="it-packet-bar" class="bg-gradient-to-r from-emerald-400 to-emerald-300 h-1.5 rounded-full transition-all duration-500" style="width: 100%"></div>
                             </div>
                         </div>
                         <div>
                             <div class="flex justify-between text-[10px] mb-1.5 font-mono">
                                 <span class="text-slate-500">KUAT_SINYAL</span>
-                                <span class="text-cyan-500 font-bold">-64 dBm</span>
+                                <span class="text-cyan-500 font-bold" id="it-signal-strength">-64 dBm</span>
                             </div>
                             <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                                <div class="bg-gradient-to-r from-cyan-500 to-cyan-400 h-1.5 rounded-full" style="width: 85%"></div>
+                                <div id="it-signal-bar" class="bg-gradient-to-r from-cyan-500 to-cyan-400 h-1.5 rounded-full transition-all duration-500" style="width: 85%"></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Terminal Log -->
-                <div class="bg-slate-100 border border-slate-200 rounded-[1.5rem] p-4 flex-1 flex flex-col min-h-[300px] shadow-inner relative">
+                <div class="bg-slate-100 border border-slate-200 rounded-[1.5rem] p-4 flex-1 flex flex-col h-[300px] shadow-inner relative">
                     <div class="flex items-center justify-between border-b border-slate-200 pb-2 mb-3 shrink-0">
                         <h3 class="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center">
                             <i class="fa-solid fa-terminal mr-2 text-slate-400"></i> Log Sistem
                         </h3>
                         <span class="text-[8px] font-mono text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded animate-pulse">MEMANTAU...</span>
                     </div>
-                    <div id="it-terminal" class="flex-1 font-mono text-[9px] leading-relaxed text-slate-500 overflow-y-hidden relative">
-                        <div class="absolute bottom-0 w-full space-y-1.5">
-                            <div class="text-slate-500">[SYS] Memulai proses jabat tangan...</div>
-                            <div class="text-emerald-600">[OK] Saluran aman berhasil dibuat.</div>
-                            <div class="text-cyan-600">[ALIRAN] Menunggu telemetri masuk.</div>
+                    <div class="relative flex-1">
+                        <div id="it-terminal" class="absolute inset-0 font-mono text-[9px] leading-relaxed text-slate-500 overflow-y-auto pr-2" style="overflow-anchor: none;">
+                            <div class="space-y-1.5 min-h-full flex flex-col justify-end">
+                                <div class="text-slate-500">[SYS] Memulai proses jabat tangan...</div>
+                                <div class="text-emerald-600">[OK] Saluran aman berhasil dibuat.</div>
+                                <div class="text-cyan-600">[ALIRAN] Menunggu telemetri masuk.</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -317,9 +323,12 @@
                                 @endif
                             </td>
                             <td class="p-4 text-center flex justify-center space-x-2">
-                                <a href="{{ route('user.dashboard.device', $dev->slug) }}" target="_blank" class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-colors flex items-center justify-center" title="Lihat Dasbor">
+                                <button onclick="if(typeof switchDevice === 'function') { switchDevice('{{ $dev->slug }}', '{{ addslashes($dev->name) }}'); window.scrollTo({top:0, behavior:'smooth'}); } else { window.location.href = '{{ route('user.dashboard.device', $dev->slug) }}'; }" class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-colors flex items-center justify-center" title="Tampilkan di Dasbor IT">
                                     <i class="fa-solid fa-eye text-xs"></i>
-                                </a>
+                                </button>
+                                <button onclick="openCalibrationModal({{ json_encode($dev) }})" class="w-8 h-8 rounded-lg bg-cyan-50 text-cyan-500 hover:bg-cyan-500 hover:text-white transition-colors flex items-center justify-center" title="Kalibrasi Sensor">
+                                    <i class="fa-solid fa-sliders text-xs"></i>
+                                </button>
                                 <button onclick="openDeviceModal('edit', {{ json_encode($dev) }})" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition-colors flex items-center justify-center" title="Edit Perangkat">
                                     <i class="fa-solid fa-pen text-xs"></i>
                                 </button>
@@ -398,6 +407,9 @@
         </div>
     </div>
 
+    <!-- Modals -->
+    @include('partials.dashboard.calibration_modal')
+
     <!-- System Scripts -->
     @include('partials.dashboard.scripts')
 
@@ -420,6 +432,9 @@
             ];
             
             setInterval(() => {
+                const connectionText = document.getElementById('connection-text')?.textContent;
+                if(connectionText && connectionText.includes('OFFLINE')) return; // Berhenti jika offline
+
                 const newLog = document.createElement('div');
                 newLog.className = 'text-slate-500';
                 const randLog = logs[Math.floor(Math.random() * logs.length)];
@@ -427,15 +442,51 @@
                 newLog.textContent = `[${time}] ${randLog}`;
                 
                 terminal.appendChild(newLog);
-                if (terminal.children.length > 15) {
+                if (terminal.children.length > 50) { // Biarkan sedikit lebih panjang sebelum dihapus
                     terminal.removeChild(terminal.firstChild);
+                }
+                
+                // Auto-scroll ke bawah pada container terminal (bukan halaman)
+                const terminalContainer = document.getElementById('it-terminal');
+                if(terminalContainer) {
+                    terminalContainer.scrollTop = terminalContainer.scrollHeight;
                 }
             }, 2000);
 
             // --- 2. Micro Metrics Randomizer ---
             setInterval(() => {
-                document.getElementById('it-ping').textContent = Math.floor(Math.random() * 5) + 10; // 10-14ms
-                document.getElementById('it-qps').textContent = Math.floor(Math.random() * 100) + 400; // 400-500
+                const connectionText = document.getElementById('connection-text')?.textContent;
+                const isOffline = connectionText && (connectionText.includes('OFFLINE') || connectionText.includes('DISCONNECTED'));
+
+                if(isOffline) {
+                    document.getElementById('it-uptime').textContent = '0%';
+                    document.getElementById('it-ping').textContent = '0';
+                    document.getElementById('it-qps').textContent = '0';
+                    document.getElementById('it-voltage').textContent = '0.00 V';
+                    document.getElementById('it-connections').textContent = '0';
+                    document.getElementById('it-memory').textContent = '-- / --';
+                    document.getElementById('it-cpu-temp').textContent = '--';
+                    if(document.getElementById('it-cpu-bar')) document.getElementById('it-cpu-bar').style.width = '0%';
+                    if(document.getElementById('it-packet-loss')) document.getElementById('it-packet-loss').textContent = '100%';
+                    if(document.getElementById('it-packet-bar')) document.getElementById('it-packet-bar').style.width = '0%';
+                    if(document.getElementById('it-signal-strength')) document.getElementById('it-signal-strength').textContent = 'NO_SIGNAL';
+                    if(document.getElementById('it-signal-bar')) document.getElementById('it-signal-bar').style.width = '0%';
+                    return;
+                }
+                
+                // Animasi saat Online
+                document.getElementById('it-ping').textContent = Math.floor(Math.random() * 5) + 10;
+                document.getElementById('it-qps').textContent = Math.floor(Math.random() * 100) + 400;
+                document.getElementById('it-voltage').textContent = (5.00 + Math.random() * 0.1).toFixed(2) + ' V';
+                document.getElementById('it-connections').textContent = (1200 + Math.floor(Math.random() * 50)).toLocaleString();
+                
+                const cpuVal = 45 + Math.floor(Math.random() * 10);
+                document.getElementById('it-cpu-temp').textContent = cpuVal + '°C';
+                document.getElementById('it-cpu-bar').style.width = cpuVal + '%';
+
+                const signalVal = 70 + Math.floor(Math.random() * 15);
+                document.getElementById('it-signal-strength').textContent = '-' + (100 - signalVal) + ' dBm';
+                document.getElementById('it-signal-bar').style.width = signalVal + '%';
             }, 1000);
 
             // --- 3. IT Sentinel Map (Light Mode) ---

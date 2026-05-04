@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Monitoring Dashboard | Real-Time Water Level</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            base: '#0f172a',
+                            surface: '#1e293b',
+                            primary: '#06b6d4',
+                            accent: '#3b82f6',
+                            glow: '#0ea5e9',
+                            danger: '#ef4444'
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'ping-slow': 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite',
+                        'wave-slow': 'wave 10s linear infinite',
+                        'wave-fast': 'wave 7s linear infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                        'scan': 'scan 3s linear infinite',
+                        'fade-in-up': 'fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                    },
+                    keyframes: {
+                        'fade-in-up': {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        wave: {
+                            '0%': { transform: 'translateX(0)' },
+                            '100%': { transform: 'translateX(-50%)' }
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        scan: {
+                            '0%': { transform: 'translateY(-100%)', opacity: '0' },
+                            '50%': { opacity: '0.5' },
+                            '100%': { transform: 'translateY(100%)', opacity: '0' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Pusher & Echo -->
+    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
+    <!-- Leaflet JS for GIS Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Import Google Fonts: Inter and Rajdhani -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            /* Luxury Minimalist Light Theme Colors */
+            --luxury-primary: #3b82f6;      /* Bright Blue */
+            --luxury-secondary: #0ea5e9;    /* Light Blue */
+            --luxury-accent: #06b6d4;       /* Cyan */
+            --luxury-bg: #f8fafc;           /* Slate 50 - Off white */
+            --luxury-surface: rgba(255, 255, 255, 0.85);
+            --luxury-border: rgba(226, 232, 240, 0.8);
+            --luxury-text-main: #0f172a;    /* Slate 900 */
+            --luxury-text-muted: #64748b;   /* Slate 500 */
+            --wave-1: rgba(14, 165, 233, 0.4);
+            --wave-2: rgba(59, 130, 246, 0.6);
+            --wave-3: rgba(6, 182, 212, 0.8);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--luxury-bg);
+            color: var(--luxury-text-main);
+            background-image: radial-gradient(circle at top right, rgba(59, 130, 246, 0.05), transparent 40%),
+                              radial-gradient(circle at bottom left, rgba(6, 182, 212, 0.05), transparent 40%);
+        }
+
+        /* Glassmorphism Panel */
+        .glass-panel {
+            background: var(--luxury-surface);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--luxury-border);
+            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08), 
+                        0 1px 3px rgba(0, 0, 0, 0.02);
+            transition: all 0.3s ease;
+        }
+        
+        /* Enterprise Luxury Profiles */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 
+                0 4px 6px -1px rgba(0, 0, 0, 0.01),
+                0 10px 15px -3px rgba(0, 0, 0, 0.02),
+                0 20px 25px -5px rgba(0, 0, 0, 0.02);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-panel:hover {
+            box-shadow: 
+                0 10px 20px -5px rgba(0, 0, 0, 0.03),
+                0 25px 50px -12px rgba(59, 130, 246, 0.08);
+            transform: translateY(-3px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .font-rajdhani { font-family: 'Rajdhani', sans-serif; }
+        .font-inter { font-family: 'Inter', sans-serif; }
+        .font-mono-sentinel { font-family: 'Fira Code', 'Roboto Mono', monospace; }
+        
+        .text-gradient {
+            background: linear-gradient(135deg, var(--luxury-primary), var(--luxury-accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Luxury Glass Tank Animation */
+        .glass-tank-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255, 0.1) 0%, rgba(255,255,255, 0.6) 100%);
+            border-radius: 2rem;
+            overflow: hidden; /* Contains the water */
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.05), 
+                        inset 0 20px 40px rgba(255,255,255, 0.8),
+                        0 10px 30px rgba(0,0,0,0.05);
+            margin-top: 1rem;
+            backdrop-filter: blur(5px);
+        }
+
+        /* Glare effect for glass tank */
+        .glass-tank-container::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 5%; bottom: 0; width: 15%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transform: skewX(-20deg);
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        /* The Liquid Container */
+        .liquid-water {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%; /* Dynamic */
+            transition: height 2.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+            z-index: 10;
+            
+            background: linear-gradient(180deg, #38bdf8 0%, #0369a1 40%, #1e3a8a 100%);
+            box-shadow: inset 0 20px 60px rgba(255, 255, 255, 0.2),
+                        0 -10px 40px rgba(14, 165, 233, 0.3);
+            border-top: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Inner Bubbles / Particles */
+        .liquid-water-particles {
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(rgba(255,255,255,0.4) 1px, transparent 1px);
+            background-size: 30px 30px;
+            opacity: 0.3;
+            animation: rise-up 20s linear infinite;
+            pointer-events: none;
+        }
+
+        /* Waves using CSS mask-image */
+        .liquid-water::before {
+            content: '';
+            position: absolute;
+            top: -19px; /* Sit right on top of the liquid */
+            left: -5%;
+            width: 110%; /* Slightly wider to allow swaying */
+            height: 20px;
+            background-color: #38bdf8;
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V95.8C59.71,118.08,130.83,119.56,189.7,100.8,236.4,85.87,281.42,71.21,321.39,56.44Z'/%3E%3C/svg%3E");
+            -webkit-mask-size: 100% 100%;
+            -webkit-mask-repeat: no-repeat;
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V95.8C59.71,118.08,130.83,119.56,189.7,100.8,236.4,85.87,281.42,71.21,321.39,56.44Z'/%3E%3C/svg%3E");
+            mask-size: 100% 100%;
+            mask-repeat: no-repeat;
+            animation: wave-sway 6s ease-in-out infinite alternate;
+        }
+
+        .liquid-water::after {
+            content: '';
+            position: absolute;
+            top: -24px;
+            left: -5%;
+            width: 110%;
+            height: 25px;
+            background-color: rgba(2, 132, 199, 0.8);
+            -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M985.66,92.83C906.67,72,823.78,31,743.84,14.19c-82.26-17.34-168.06-16.33-250.45.39-57.84,11.73-114,31.07-172,41.86A600.21,600.21,0,0,1,0,27.35V120H1200V95.8C1132.19,118.92,1055.71,111.31,985.66,92.83Z'/%3E%3C/svg%3E");
+            -webkit-mask-size: 100% 100%;
+            -webkit-mask-repeat: no-repeat;
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M985.66,92.83C906.67,72,823.78,31,743.84,14.19c-82.26-17.34-168.06-16.33-250.45.39-57.84,11.73-114,31.07-172,41.86A600.21,600.21,0,0,1,0,27.35V120H1200V95.8C1132.19,118.92,1055.71,111.31,985.66,92.83Z'/%3E%3C/svg%3E");
+            mask-size: 100% 100%;
+            mask-repeat: no-repeat;
+            animation: wave-sway-reverse 8s ease-in-out infinite alternate;
+        }
+
+        @keyframes wave-sway {
+            0% { transform: translateX(-2%); }
+            100% { transform: translateX(2%); }
+        }
+        @keyframes wave-sway-reverse {
+            0% { transform: translateX(2%); }
+            100% { transform: translateX(-2%); }
+        }
+
+        /* Cockpit Assembly Animations */
+        @keyframes assembleBg {
+            0% { opacity: 0; box-shadow: none; border-color: transparent; backdrop-filter: blur(0px); }
+            100% { opacity: 1; }
+        }
+        .animate-assemble-bg {
+            opacity: 0;
+            animation: assembleBg 1.5s ease-out forwards;
+        }
+
+        @keyframes assembleLeft {
+            0% { opacity: 0; transform: translateX(-150px) translateZ(-50px) scale(0.9); }
+            100% { opacity: 1; transform: translateX(0) translateZ(0) scale(1); }
+        }
+        .animate-assemble-left {
+            opacity: 0;
+            transform-style: preserve-3d;
+            animation: assembleLeft 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+        }
+
+        @keyframes assembleCenter {
+            0% { opacity: 0; transform: translateY(150px) translateZ(50px) scale(0.9); }
+            100% { opacity: 1; transform: translateY(0) translateZ(0) scale(1); }
+        }
+        .animate-assemble-center {
+            opacity: 0;
+            transform-style: preserve-3d;
+            animation: assembleCenter 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards;
+        }
+
+        @keyframes assembleRight {
+            0% { opacity: 0; transform: translateX(150px) translateZ(-50px) scale(0.9); }
+            100% { opacity: 1; transform: translateX(0) translateZ(0) scale(1); }
+        }
+        .animate-assemble-right {
+            opacity: 0;
+            transform-style: preserve-3d;
+            animation: assembleRight 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards;
+        }
+
+        /* Immersive Weather (Rain) */
+        .weather-rain {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 50;
+            overflow: hidden;
+            border-radius: 2.5rem;
+            opacity: 0;
+            transition: opacity 2s ease;
+        }
+        .weather-rain.active { opacity: 1; }
+        .drop {
+            position: absolute;
+            bottom: 100%;
+            width: 2px;
+            height: 40px;
+            pointer-events: none;
+            animation: drop 0.5s linear infinite;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.4));
+        }
+        @keyframes drop {
+            0% { transform: translateY(0vh); }
+            100% { transform: translateY(100vh); }
+        }
+
+        .level-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: rgba(0,0,0,0.03);
+            z-index: 5;
+        }
+        /* Accessibility Patterns */
+        .pattern-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.1;
+            z-index: 5;
+        }
+        .pattern-siaga1 { background-image: repeating-linear-gradient(45deg, #000 0, #000 1px, transparent 0, transparent 50%); background-size: 10px 10px; }
+        .pattern-siaga2 { background-image: repeating-linear-gradient(-45deg, #000 0, #000 1px, transparent 0, transparent 50%); background-size: 8px 8px; }
+        .pattern-siaga3 { background-image: radial-gradient(#000 1px, transparent 0); background-size: 6px 6px; }
+
+        .surface-badge {
+            position: absolute;
+            right: 0%;
+            background: #0f172a;
+            color: #fff;
+            padding: 4px 12px;
+            border-radius: 99px;
+            font-size: 11px;
+            font-weight: 900;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            border: 2px solid #fff;
+            z-index: 100;
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+        }
+
+        .level-label {
+            position: absolute;
+            right: 12%;
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: currentColor;
+            z-index: 45;
+            transition: all 0.4s ease;
+            filter: drop-shadow(0 2px 0 rgba(255,255,255,1));
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .level-label.active {
+            opacity: 1 !important;
+            transform: translateX(-15px) scale(1.2);
+            filter: drop-shadow(0 0 15px rgba(255,255,255,0.8));
+        }
+        /* Weather Sentinel Styles */
+        #weather-sentinel {
+            z-index: 20;
+            border: 1px solid rgba(255,255,255,0.4);
+        }
+        #weather-correlation-alert {
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.2);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        }
+        
+        @keyframes pulse-blue {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+            50% { box-shadow: 0 0 20px 5px rgba(59, 130, 246, 0.2); }
+        }
+        .animate-pulse-slow {
+            animation: pulse-blue 3s infinite;
+        }
+
+        /* Sky Sentinel (Luxury Weather) Styles */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); filter: drop-shadow(0 10px 20px rgba(0,0,0,0.1)); }
+            50% { transform: translateY(-10px); filter: drop-shadow(0 20px 40px rgba(59, 130, 246, 0.2)); }
+        }
+        .animate-float {
+            animation: float 4s ease-in-out infinite;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .depth-tick {
+            position: absolute;
+            left: 17%;
+            width: 14px;
+            height: 3px;
+            background: #0f172a;
+            z-index: 45;
+            border-radius: 2px;
+            border: 1px solid rgba(255,255,255,0.8);
+        }
+        .depth-value {
+            position: absolute;
+            left: 5%;
+            font-size: 10px;
+            font-weight: 900;
+            color: #0f172a;
+            font-family: 'Rajdhani', sans-serif;
+            z-index: 45;
+            background: rgba(255,255,255,0.8);
+            padding: 0 4px;
+            border-radius: 4px;
+        }
+
+        @keyframes wave-ripple {
+            0% { transform: scale(1); opacity: 0.5; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        /* Custom Scrollbar for Logs */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: var(--luxury-secondary);
+            border-radius: 4px;
+        }
+
+        /* Radar dot glow override */
+        #radar-blip {
+            box-shadow: 0 0 10px var(--luxury-primary);
+        }
+        
+        /* Sentinel Map Styles */
+        #sentinel-map {
+            width: 100%;
+            height: 100%;
+            border-radius: 1.5rem;
+            z-index: 1;
+            filter: grayscale(0.2) contrast(1.1);
+        }
+        
+        /* Map Pulse Animation */
+        .sentinel-pulse {
+            width: 12px;
+            height: 12px;
+            background: var(--luxury-primary);
+            border-radius: 50%;
+            box-shadow: 0 0 0 rgba(59, 130, 246, 0.4);
+            animation: pulse-ring 2s infinite;
+        }
+
+        .sentinel-pulse.danger {
+            background: #ef4444;
+            box-shadow: 0 0 0 rgba(239, 68, 68, 0.4);
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(59, 130, 246, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+
+        .leaflet-container {
+            background: #0f172a !important; /* Dark theme background */
+        }
+        
+        .sentinel-info-window {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 12px;
+            color: white;
+            min-width: 200px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen relative antialiased selection:bg-blue-200 selection:text-blue-900 pb-10 bg-slate-50 overflow-x-hidden">
+
+    <!-- Top Accent Line -->
+    <div class="fixed top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 z-50"></div>
+
+    <!-- Main Container -->
+    <div class="w-full mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 mt-4 relative z-10">
+        
+        <!-- Header Section -->
+        <header class="flex flex-col md:flex-row items-center justify-between mb-8 pb-4 border-b border-slate-200">
+    <div class="flex items-center space-x-4 mb-4 md:mb-0">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <i class="fa-solid fa-water text-white text-2xl"></i>
+        </div>
+        <div>
+            <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Water <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">Monitoring</span></h1>
+            <p class="text-sm font-medium text-slate-500 tracking-wide uppercase">Environmental Division</p>
+        </div>
+    </div>
+    <div class="flex items-center space-x-4">
+        <!-- Mode Switcher -->
+        <div class="flex bg-slate-100 p-1 rounded-xl shadow-inner border border-slate-200">
+            <a href="http://localhost:8000" class="px-3 py-1.5 rounded-lg text-xs font-bold tracking-wider transition-all text-slate-500 hover:text-slate-700">
+                <i class="fa-solid fa-user mr-1"></i> USER
+            </a>
+            <a href="http://localhost:8000/it" class="px-3 py-1.5 rounded-lg text-xs font-bold tracking-wider transition-all text-slate-500 hover:text-slate-700">
+                <i class="fa-solid fa-microchip mr-1"></i> IT
+            </a>
+        </div>
+
+        <a href="http://localhost:8000/devices" class="flex items-center px-4 py-2 rounded-xl bg-slate-900 text-white shadow-lg shadow-slate-900/20 hover:bg-blue-600 transition-all text-xs font-bold tracking-widest group">
+            <i class="fa-solid fa-server mr-2 opacity-50 group-hover:opacity-100"></i> MANAJEMEN PERANGKAT
+        </a>
+        <div id="connection-status" class="flex items-center px-4 py-2 rounded-full bg-white shadow-sm border border-slate-100 transition-colors duration-500">
+            <span class="w-2.5 h-2.5 rounded-full bg-slate-400 mr-2 animate-pulse" id="connection-dot"></span>
+            <span id="connection-text" class="text-xs font-bold tracking-widest text-slate-500">CONNECTING...</span>
+        </div>
+    </div>
+</header>
+
+        <!-- Unified Cockpit Interface -->
+        <div class="glass-panel rounded-[2.5rem] p-4 lg:p-6 mt-4 bg-white/60 shadow-2xl backdrop-blur-2xl border border-white/80 animate-assemble-bg" style="opacity: 0; perspective: 2500px;">
+            
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch transform-style-3d">
+                
+                <!-- Column 1: Weather & Guides (3 Cols) -->
+                <div class="lg:col-span-3 flex flex-col space-y-4 animate-assemble-left" style="opacity: 0;">
+                    
+                    <!-- Title inside the cockpit -->
+                    <div class="mb-2">
+                        <h2 class="text-xl font-black text-slate-800 tracking-tight uppercase">Pantauan Publik</h2>
+                        <p class="text-slate-500 text-xs font-bold tracking-widest mt-1">SISTEM INFORMASI CITARUM</p>
+                    </div>
+
+                    <!-- Compact Weather -->
+                    <div class="rounded-3xl p-5 relative overflow-hidden bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/30 group">
+                        <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all"></div>
+                        <div class="relative z-10">
+                            <div class="flex items-center space-x-2 mb-3">
+                                <i class="fa-solid fa-location-dot text-cyan-200 animate-bounce text-sm"></i>
+                                <span id="sky-location-detail" class="text-[10px] font-black uppercase tracking-widest truncate">Lokasi...</span>
+                            </div>
+                            <div class="flex items-center space-x-4 mb-4">
+                                <div id="sky-icon-main" class="text-5xl filter drop-shadow-md"><i class="fa-solid fa-cloud-sun text-amber-300"></i></div>
+                                <div>
+                                    <div id="sky-temp" class="text-4xl font-black tracking-tighter leading-none">--°C</div>
+                                    <div id="sky-desc" class="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-1">Memuat...</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between pt-3 border-t border-white/20">
+                                <div class="text-center">
+                                    <div class="text-[9px] uppercase font-black text-blue-200 mb-1">Angin</div>
+                                    <div id="sky-wind" class="font-bold text-xs">--</div>
+                                </div>
+                                <div class="w-px h-6 bg-white/20"></div>
+                                <div class="text-center">
+                                    <div class="text-[9px] uppercase font-black text-blue-200 mb-1">Lembap</div>
+                                    <div id="sky-humidity" class="font-bold text-xs">--</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+                    <!-- Compact Status Guide -->
+                    <div class="rounded-3xl p-5 bg-white border border-slate-100 shadow-sm flex-1">
+                        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 flex items-center">
+                            <i class="fa-solid fa-circle-info mr-2"></i> Panduan
+                        </h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-check text-xs"></i></div>
+                                <div><div class="text-[10px] font-black uppercase text-slate-700 leading-none">Normal</div><div class="text-[9px] text-slate-400 mt-1">Aman</div></div>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-triangle-exclamation text-xs"></i></div>
+                                <div><div class="text-[10px] font-black uppercase text-slate-700 leading-none">Siaga 3</div><div class="text-[9px] text-slate-400 mt-1">Waspada</div></div>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-bell text-xs"></i></div>
+                                <div><div class="text-[10px] font-black uppercase text-slate-700 leading-none">Siaga 2</div><div class="text-[9px] text-slate-400 mt-1">Siaga Banjir</div></div>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0 animate-pulse"><i class="fa-solid fa-skull-crossbones text-xs"></i></div>
+                                <div><div class="text-[10px] font-black uppercase text-red-600 leading-none">Siaga 1</div><div class="text-[9px] text-red-500 font-bold mt-1">Evakuasi Kritis!</div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Column 2: The Core River Visual (5 Cols) -->
+                <div class="lg:col-span-5 relative min-h-[400px] xl:min-h-[500px] flex items-stretch animate-assemble-center" style="opacity: 0;">
+                    <!-- Glass Tank natively occupying the space without its own panel background -->
+                    <div class="glass-tank-container relative w-full h-full rounded-[2rem] shadow-[inset_0_0_50px_rgba(0,0,0,0.05)] bg-slate-100/50 border-4 border-white/60 overflow-hidden">
+                        
+                        <!-- Immersive Weather Overlay -->
+                        <div class="weather-rain" id="weather-rain">
+                                                            <div class="drop" style="left: 99%; animation-duration: 0.6s; animation-delay: 0.4s;"></div>
+                                                            <div class="drop" style="left: 94%; animation-duration: 0.8s; animation-delay: 0.8s;"></div>
+                                                            <div class="drop" style="left: 96%; animation-duration: 0.5s; animation-delay: 0.4s;"></div>
+                                                            <div class="drop" style="left: 35%; animation-duration: 0.8s; animation-delay: 0.1s;"></div>
+                                                            <div class="drop" style="left: 48%; animation-duration: 1s; animation-delay: 0.1s;"></div>
+                                                            <div class="drop" style="left: 18%; animation-duration: 0.6s; animation-delay: 0s;"></div>
+                                                            <div class="drop" style="left: 84%; animation-duration: 0.9s; animation-delay: 0.6s;"></div>
+                                                            <div class="drop" style="left: 72%; animation-duration: 0.9s; animation-delay: 1s;"></div>
+                                                            <div class="drop" style="left: 17%; animation-duration: 0.5s; animation-delay: 1s;"></div>
+                                                            <div class="drop" style="left: 23%; animation-duration: 0.9s; animation-delay: 0s;"></div>
+                                                            <div class="drop" style="left: 13%; animation-duration: 0.9s; animation-delay: 0.1s;"></div>
+                                                            <div class="drop" style="left: 91%; animation-duration: 0.8s; animation-delay: 0.1s;"></div>
+                                                            <div class="drop" style="left: 44%; animation-duration: 0.5s; animation-delay: 0.7s;"></div>
+                                                            <div class="drop" style="left: 62%; animation-duration: 0.9s; animation-delay: 0.3s;"></div>
+                                                            <div class="drop" style="left: 14%; animation-duration: 0.8s; animation-delay: 0.8s;"></div>
+                                                            <div class="drop" style="left: 67%; animation-duration: 0.9s; animation-delay: 0.9s;"></div>
+                                                            <div class="drop" style="left: 78%; animation-duration: 0.6s; animation-delay: 0s;"></div>
+                                                            <div class="drop" style="left: 98%; animation-duration: 0.5s; animation-delay: 0.6s;"></div>
+                                                            <div class="drop" style="left: 43%; animation-duration: 0.7s; animation-delay: 0.2s;"></div>
+                                                            <div class="drop" style="left: 34%; animation-duration: 0.7s; animation-delay: 0.2s;"></div>
+                                                            <div class="drop" style="left: 10%; animation-duration: 0.7s; animation-delay: 0.9s;"></div>
+                                                            <div class="drop" style="left: 13%; animation-duration: 0.8s; animation-delay: 0.9s;"></div>
+                                                            <div class="drop" style="left: 33%; animation-duration: 0.8s; animation-delay: 0.5s;"></div>
+                                                            <div class="drop" style="left: 6%; animation-duration: 0.6s; animation-delay: 0.5s;"></div>
+                                                            <div class="drop" style="left: 98%; animation-duration: 0.7s; animation-delay: 0.9s;"></div>
+                                                            <div class="drop" style="left: 20%; animation-duration: 0.7s; animation-delay: 0.7s;"></div>
+                                                            <div class="drop" style="left: 83%; animation-duration: 0.9s; animation-delay: 0.8s;"></div>
+                                                            <div class="drop" style="left: 25%; animation-duration: 0.7s; animation-delay: 0.6s;"></div>
+                                                            <div class="drop" style="left: 92%; animation-duration: 0.5s; animation-delay: 0s;"></div>
+                                                            <div class="drop" style="left: 80%; animation-duration: 0.8s; animation-delay: 0s;"></div>
+                                                            <div class="drop" style="left: 82%; animation-duration: 0.9s; animation-delay: 0.7s;"></div>
+                                                            <div class="drop" style="left: 64%; animation-duration: 1s; animation-delay: 0s;"></div>
+                                                            <div class="drop" style="left: 30%; animation-duration: 0.8s; animation-delay: 0.8s;"></div>
+                                                            <div class="drop" style="left: 62%; animation-duration: 0.5s; animation-delay: 0.3s;"></div>
+                                                            <div class="drop" style="left: 57%; animation-duration: 0.9s; animation-delay: 0.5s;"></div>
+                                                            <div class="drop" style="left: 82%; animation-duration: 0.7s; animation-delay: 0.9s;"></div>
+                                                            <div class="drop" style="left: 24%; animation-duration: 0.6s; animation-delay: 0.1s;"></div>
+                                                            <div class="drop" style="left: 93%; animation-duration: 0.9s; animation-delay: 0.8s;"></div>
+                                                            <div class="drop" style="left: 42%; animation-duration: 0.7s; animation-delay: 1s;"></div>
+                                                            <div class="drop" style="left: 6%; animation-duration: 0.8s; animation-delay: 0.7s;"></div>
+                                                    </div>
+
+                        <!-- Accessibility Zone Patterns -->
+                        <div class="absolute inset-x-0 bottom-0 z-0 flex flex-col-reverse h-full pointer-events-none rounded-[2rem] overflow-hidden">
+                            <div class="pattern-overlay pattern-siaga1 h-[41.7%]" style="bottom: 58.3%"></div>
+                            <div class="pattern-overlay pattern-siaga2 h-[8.3%]" style="bottom: 50%"></div>
+                            <div class="pattern-overlay pattern-siaga3 h-[16.7%]" style="bottom: 33.3%"></div>
+                        </div>
+                        
+                        <!-- Water Layer -->
+                        <div class="liquid-water" id="river-water" style="height: 0%;">
+                            <div class="liquid-water-particles"></div>
+                            <!-- Dynamic Percent Label -->
+                            <div id="water-percent-container" class="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center transition-all duration-700 pointer-events-none z-20">
+                                <div id="water-percent" class="text-6xl font-black text-white/20 uppercase tracking-tighter mix-blend-overlay transition-all duration-500">0%</div>
+                            </div>
+                        </div>
+
+                        <!-- Floating Surface Badge -->
+                        <div id="surface-badge" class="surface-badge !text-[10px] !px-3 !py-1" style="bottom: 0px; transform: translateY(50%);">
+                            <i id="surface-icon" class="fa-solid fa-circle-check"></i>
+                            <span id="surface-text">NORMAL</span>
+                        </div>
+
+                        <!-- Foreground Overlays (High Contrast) -->
+                        <div class="absolute inset-0 z-40 pointer-events-none">
+                                                                                                                                <div class="absolute right-0 left-0 h-px bg-slate-900/[0.08]" style="bottom: 0%"></div>
+                                    <div class="depth-tick !w-12 !bg-slate-900" style="bottom: 0%"></div>
+                                    <div class="depth-value !text-[10px]" style="bottom: 0%; transform: translateY(50%)">8.00</div>
+                                                                                                                                                                <div class="depth-tick !w-4" style="bottom: 8.3333333333333%"></div>
+                                                                                                                                                                <div class="absolute right-0 left-0 h-px bg-slate-900/[0.08]" style="bottom: 16.666666666667%"></div>
+                                    <div class="depth-tick !w-12 !bg-slate-900" style="bottom: 16.666666666667%"></div>
+                                    <div class="depth-value !text-[10px]" style="bottom: 16.666666666667%; transform: translateY(50%)">9.00</div>
+                                                                                                                                                                <div class="depth-tick !w-4" style="bottom: 25%"></div>
+                                                                                                                                                                <div class="absolute right-0 left-0 h-px bg-slate-900/[0.08]" style="bottom: 33.333333333333%"></div>
+                                    <div class="depth-tick !w-12 !bg-slate-900" style="bottom: 33.333333333333%"></div>
+                                    <div class="depth-value !text-[10px]" style="bottom: 33.333333333333%; transform: translateY(50%)">10.00</div>
+                                                                                                                                                                <div class="depth-tick !w-4" style="bottom: 41.666666666667%"></div>
+                                                                                                                                                                <div class="absolute right-0 left-0 h-px bg-slate-900/[0.08]" style="bottom: 50%"></div>
+                                    <div class="depth-tick !w-12 !bg-slate-900" style="bottom: 50%"></div>
+                                    <div class="depth-value !text-[10px]" style="bottom: 50%; transform: translateY(50%)">11.00</div>
+                                                                                                                                                                <div class="depth-tick !w-4" style="bottom: 58.333333333333%"></div>
+                                                                                                                                                                <div class="absolute right-0 left-0 h-px bg-slate-900/[0.08]" style="bottom: 66.666666666667%"></div>
+                                    <div class="depth-tick !w-12 !bg-slate-900" style="bottom: 66.666666666667%"></div>
+                                    <div class="depth-value !text-[10px]" style="bottom: 66.666666666667%; transform: translateY(50%)">12.00</div>
+                                                                                                                                                                <div class="depth-tick !w-4" style="bottom: 75%"></div>
+                                                                                                                                                                <div class="absolute right-0 left-0 h-px bg-slate-900/[0.08]" style="bottom: 83.333333333333%"></div>
+                                    <div class="depth-tick !w-12 !bg-slate-900" style="bottom: 83.333333333333%"></div>
+                                    <div class="depth-value !text-[10px]" style="bottom: 83.333333333333%; transform: translateY(50%)">13.00</div>
+                                                                                                                                                                <div class="depth-tick !w-4" style="bottom: 91.666666666667%"></div>
+                                                                                                                                                                <div class="absolute right-0 left-0 h-px bg-slate-900/[0.08]" style="bottom: 100%"></div>
+                                    <div class="depth-tick !w-12 !bg-slate-900" style="bottom: 100%"></div>
+                                    <div class="depth-value !text-[10px]" style="bottom: 100%; transform: translateY(50%)">14.00</div>
+                                                                                    </div>
+                    </div>
+                </div>
+
+                <!-- Column 3: Telemetry & Alerts (4 Cols) -->
+                <div class="lg:col-span-4 flex flex-col justify-center space-y-4 animate-assemble-right" style="opacity: 0;">
+                    
+                    <!-- Alert Banner (Integrated) -->
+                    <div id="alert-banner" class="px-5 py-3 rounded-2xl flex items-center space-x-3 transition-all duration-300 bg-emerald-50 text-emerald-600 border border-emerald-100 hidden">
+                        <i id="alert-icon" class="fa-solid fa-shield-check text-3xl"></i>
+                        <div>
+                            <div class="text-[10px] font-black tracking-widest uppercase mb-1">Status Sungai</div>
+                            <div id="alert-message" class="font-black text-xl tracking-wide uppercase leading-none">Aman Terkendali</div>
+                        </div>
+                    </div>
+
+                    <!-- Main KPI & Map Row -->
+                    <div class="grid grid-cols-2 gap-4 flex-1">
+                        <!-- Main TMA KPI (Massive) -->
+                        <div class="rounded-[2rem] p-6 bg-white border border-slate-100 shadow-sm relative overflow-hidden group hover:border-blue-200 transition-colors flex flex-col justify-center">
+                            <div class="absolute -right-6 -bottom-6 opacity-5 group-hover:opacity-10 transition-opacity">
+                                <i class="fa-solid fa-water text-8xl"></i>
+                            </div>
+                            <h3 class="text-[10px] text-slate-400 font-black mb-3 uppercase tracking-[0.2em] relative z-10">Tinggi Permukaan Air</h3>
+                            <div class="flex items-baseline mb-4 relative z-10">
+                                <div id="water-level" class="text-5xl xl:text-6xl font-black text-slate-800 odometer tracking-tighter leading-none font-rajdhani">--</div>
+                                <span class="text-lg text-blue-500 font-bold ml-2">MDPL</span>
+                            </div>
+                            <div class="flex items-center space-x-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 inline-flex px-3 py-1.5 rounded-lg border border-slate-100 relative z-10">
+                                <i class="fa-solid fa-clock text-blue-500"></i>
+                                <span id="live-clock">--:--:-- WIB</span>
+                            </div>
+
+                            <!-- Real-time Sparkline -->
+                            <div class="mt-4 h-16 w-full relative z-10 opacity-80">
+                                <canvas id="tma-sparkline"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- GIS Satellite Map -->
+                        <div class="rounded-[2rem] p-2 bg-white border border-slate-100 shadow-xl overflow-hidden relative flex flex-col">
+                            <div class="absolute top-4 left-4 z-[400] flex items-center bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
+                                <span class="w-2 h-2 rounded-full bg-blue-500 mr-2 animate-ping" id="map-radar-dot"></span>
+                                <span class="text-[9px] font-black uppercase text-slate-600 tracking-widest">Satelit Aktif</span>
+                            </div>
+                            <div id="sentinel-map" class="w-full flex-1 min-h-[150px] rounded-[1.5rem] z-0 filter contrast-100 saturate-100"></div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Metrics Grid (Distance, Velocity, ETA) -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="rounded-3xl p-5 bg-white border border-slate-100 shadow-sm flex flex-col justify-center">
+                            <h3 class="text-[9px] text-slate-400 font-black mb-1 uppercase tracking-[0.2em] leading-tight">Jarak Sensor</h3>
+                            <div class="flex items-baseline">
+                                <span id="current-distance" class="text-3xl font-bold text-slate-700 odometer font-rajdhani">--</span>
+                                <span class="text-xs text-slate-400 font-bold ml-1">cm</span>
+                            </div>
+                        </div>
+                        
+                        <div class="rounded-3xl p-5 bg-white border border-slate-100 shadow-sm flex flex-col justify-center">
+                            <h3 class="text-[9px] text-slate-400 font-black mb-1 uppercase tracking-[0.2em] leading-tight">Laju Air</h3>
+                            <div class="flex items-baseline text-blue-500 transition-colors" id="velocity-container">
+                                <i class="fa-solid fa-arrow-right text-xs mr-1" id="velocity-icon"></i>
+                                <span id="flow-velocity" class="text-2xl font-bold odometer font-rajdhani">0.0</span>
+                                <span class="text-xs font-bold ml-1">cm/s</span>
+                            </div>
+                        </div>
+
+                        <div class="col-span-2 rounded-3xl p-5 bg-white border border-slate-100 shadow-xl flex items-center justify-between relative overflow-hidden group" id="eta-card">
+                            <!-- AI Decorator -->
+                            <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                                <i class="fa-solid fa-microchip text-6xl text-blue-500"></i>
+                            </div>
+                            <div class="relative z-10">
+                                <h3 class="text-[9px] text-blue-500 font-black mb-1 uppercase tracking-[0.2em]" id="eta-label">AI Prediksi (ETA Meluap)</h3>
+                                <div class="text-xl font-bold text-slate-800 font-rajdhani" id="eta-overflow">Mengkalkulasi...</div>
+                            </div>
+                            <div class="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100 relative z-10" id="eta-icon-wrapper">
+                                <i class="fa-solid fa-shield-check text-blue-500" id="eta-icon"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts Application -->
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        // --- Configuration ---
+        const SENSOR_ELEVATION_MDPL = 14.00; 
+        const SIAGA_1_TMA = 13.00; // mdpl (1 meter dari sensor)
+        const SIAGA_2_TMA = 12.80; // mdpl (1.2 meter dari sensor)
+        const SIAGA_3_TMA = 12.50; // mdpl (1.5 meter dari sensor)
+        const MAX_SAMPLES = 40;   
+        
+        // --- State ---
+        let chartData = Array(MAX_SAMPLES).fill(0);
+        let chartLabels = Array(MAX_SAMPLES).fill('');
+        let previousDepth = 0;
+        let lastRainIntensity = 0;
+        let currentLat = -6.2088;
+        let currentLng = 106.8456;
+        
+        let depthBuffer = []; 
+        let lastVoiceTime = 0;
+        let trendData24h = []; 
+        let lastTrendUpdate = 0;
+        let maxPeak = 0;
+        let minBase = 9999;
+
+        // --- Mock Historical Seed REMOVED (Ensuring real-time honesty) ---
+        // trendData24h will start empty until real data arrives
+        
+        // --- DOM Selectors (Multi-instance safe helpers) ---
+        const updateText = (selector, text) => document.querySelectorAll(selector).forEach(el => el.textContent = text);
+        const updateHtml = (selector, html) => document.querySelectorAll(selector).forEach(el => el.innerHTML = html);
+
+        // --- Echo / WebSocket Initialization ---
+        let echoInstance = null;
+        let currentDeviceSlug = 'node-wifi-wemos-d1-69f01e5649f84';
+        
+        if(typeof Echo !== 'undefined') {
+            echoInstance = new Echo({
+                broadcaster: 'reverb',
+                key: 'cl6l6oxwd2etafao2rgy',
+                wsHost: window.location.hostname || '127.0.0.1',
+                wsPort: 8081,
+                forceTLS: false,
+                encrypted: false,
+                enabledTransports: ['ws', 'wss'],
+            });
+            
+            console.log('SENTINEL Echo Initializing...');
+
+            // Connection Status UI
+            echoInstance.connector.pusher.connection.bind('connected', () => {
+                console.log('SENTINEL CONNECTED to Reverb');
+                updateText('#connection-text', 'SENTINEL CONNECTED');
+                document.querySelectorAll('#connection-dot').forEach(el => el.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse');
+            });
+
+            echoInstance.connector.pusher.connection.bind('error', (err) => {
+                console.error('SENTINEL CONNECTION ERROR:', err);
+                updateText('#connection-text', 'CONNECTION ERROR');
+            });
+            
+            echoInstance.connector.pusher.connection.bind('disconnected', () => {
+                console.warn('SENTINEL DISCONNECTED');
+                updateText('#connection-text', 'SENTINEL OFFLINE');
+                document.querySelectorAll('#connection-dot').forEach(el => el.className = 'w-2 h-2 rounded-full bg-red-500');
+            });
+
+            // Listen for Sensor Data
+            echoInstance.channel('sensor-data.' + currentDeviceSlug)
+                .listen('.sensor.updated', (e) => {
+                    if(e.sensorData) {
+                        updateDashboard({ data: e.sensorData, config: e.config });
+                    }
+                });
+                
+            // Expose switchDevice globally
+            window.switchDevice = function(slug) {
+                if(currentDeviceSlug === slug) return;
+                
+                // Leave old channel
+                echoInstance.leave('sensor-data.' + currentDeviceSlug);
+                
+                currentDeviceSlug = slug;
+                
+                // Reset dashboard view temporarily
+                updateText('#current-distance', '--');
+                updateText('#water-level', '--');
+                updateText('#flow-velocity', '0.00');
+                
+                // Join new channel
+                echoInstance.channel('sensor-data.' + currentDeviceSlug)
+                    .listen('.sensor.updated', (e) => {
+                        if(e.sensorData) {
+                            updateDashboard({ data: e.sensorData, config: e.config });
+                        }
+                    });
+                    
+                // Force poll to get immediate latest data
+                if (typeof pollTelemetry === 'function') pollTelemetry();
+                
+                // Log to terminal simulator if exists
+                const terminal = document.querySelector('#it-terminal > div');
+                if (terminal) {
+                    const newLog = document.createElement('div');
+                    newLog.className = 'text-cyan-600 font-bold';
+                    const time = new Date().toISOString().split('T')[1].substring(0, 8);
+                    newLog.textContent = `[${time}] [SWITCH] Saluran telemetri diubah ke: ${slug}`;
+                    terminal.appendChild(newLog);
+                    if (terminal.children.length > 15) terminal.removeChild(terminal.firstChild);
+                }
+            };
+        }
+
+        // --- Polling Fallback (Jika WebSocket bermasalah) ---
+        function pollTelemetry() {
+            if(!currentDeviceSlug) return;
+            fetch('/api/sensor-data/latest/' + currentDeviceSlug)
+                .then(res => res.json())
+                .then(res => {
+                    if (res.status === 'success') {
+                        updateDashboard(res);
+                    }
+                })
+                .catch(err => console.warn('Polling error:', err));
+        }
+        
+        setInterval(pollTelemetry, 5000); // Cek setiap 5 detik
+        const depthChartCtx = document.getElementById('depthChart');
+        let depthChart;
+        if(depthChartCtx) {
+            const ctx = depthChartCtx.getContext('2d');
+            let gradient = ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)');   
+            gradient.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
+            
+            depthChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: 'Depth (cm)',
+                        data: chartData,
+                        borderColor: '#3b82f6',
+                        backgroundColor: gradient,
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: {
+                            beginAtZero: false,
+                            min: 12.0,
+                            max: 14.0,
+                            grid: { color: 'rgba(0,0,0,0.05)' },
+                            ticks: { font: { size: 10, family: 'Rajdhani' } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- Sparkline Setup ---
+        const sparklineCtx = document.getElementById('tma-sparkline');
+        let sparklineChart;
+        if(sparklineCtx) {
+            const ctx2 = sparklineCtx.getContext('2d');
+            let grad = ctx2.createLinearGradient(0, 0, 0, 80);
+            grad.addColorStop(0, 'rgba(59, 130, 246, 0.4)');
+            grad.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
+
+            sparklineChart = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        data: chartData,
+                        borderColor: '#60a5fa',
+                        backgroundColor: grad,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { display: false, min: 12.0, max: 14.0 }
+                    },
+                    animation: { duration: 0 }
+                }
+            });
+        }
+
+        // --- Sentinel GIS Map Setup ---
+        let map, marker;
+        const mapContainer = document.getElementById('sentinel-map');
+        if (mapContainer) {
+            map = L.map('sentinel-map', {
+                center: [currentLat, currentLng],
+                zoom: 14,
+                zoomControl: false,
+                attributionControl: false
+            });
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19
+            }).addTo(map);
+            
+            // Fix Leaflet rendering bug inside animated/hidden containers
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 1500);
+
+            const customIcon = L.divIcon({
+                className: 'custom-marker',
+                html: `<div class="relative">
+                        <div id="marker-pulse" class="sentinel-pulse"></div>
+                       </div>`,
+                iconSize: [12, 12],
+                iconAnchor: [6, 6]
+            });
+
+            marker = L.marker([currentLat, currentLng], { icon: customIcon }).addTo(map);
+            
+            // Auto-resize map on container change
+            setTimeout(() => map.invalidateSize(), 500);
+        }
+
+        // --- Utilities & Services ---
+        function triggerMapPulse(distance) {
+            const pulseEl = document.getElementById('marker-pulse');
+            if(!pulseEl) return;
+            const tma = SENSOR_ELEVATION_MDPL - (distance / 100);
+            if (tma >= SIAGA_1_TMA) pulseEl.classList.add('danger');
+            else pulseEl.classList.remove('danger');
+            pulseEl.style.animation = 'none';
+            pulseEl.offsetHeight;
+            pulseEl.style.animation = null; 
+        }
+
+        async function resolveLocation(lat, lng) {
+            // Immediately Update Coordinate HUDs so it doesn't look stalled
+            const coordsStr = `${lat.toFixed(7)}, ${lng.toFixed(7)}`;
+            updateText('#current-coords-text', coordsStr);
+            if (document.getElementById('sky-location-detail').innerText.includes('--') || 
+                document.getElementById('sky-location-detail').innerText.includes('FETCHING')) {
+                updateText('#sky-location-detail', coordsStr);
+            }
+
+            try {
+                const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`;
+                const geoRes = await fetch(geoUrl, { 
+                    headers: { 'Accept-Language': 'id-ID,id;q=0.9' } 
+                });
+                
+                if (!geoRes.ok) throw new Error('Network response was not ok');
+                const geoData = await geoRes.json();
+                
+                if(!geoData || !geoData.address) {
+                    return { city: 'SENTINEL', state: 'INDONESIA' };
+                }
+
+                const addr = geoData.address;
+                const road = addr.road || addr.street || '';
+                const village = addr.village || addr.suburb || addr.hamlet || addr.neighbourhood || '';
+                const district = addr.city_district || addr.district || addr.municipality || '';
+                const regency = addr.city || addr.regency || addr.county || '';
+                const province = addr.state || '';
+                
+                // Pure Address logic: Exclude house numbers and numeric road parts
+                const fullParts = [road, village, district, regency, province]
+                    .filter(p => p !== '' && p !== undefined)
+                    .filter(p => !/^\d+$/.test(p.trim()))
+                    .filter(p => !/^no\.?\s*\d+$/i.test(p.trim()));
+
+                const fullStr = fullParts.join(', ').toUpperCase();
+
+                if (fullStr) {
+                    updateText('#current-address-text', fullStr);
+                    updateText('#sky-location-detail', fullStr);
+                }
+
+                return { city: (regency || 'SENTINEL').toUpperCase(), state: (province || 'INDONESIA').toUpperCase() };
+            } catch (e) {
+                console.warn('[SENTINEL-GEO] Satellite resolution delayed. Staying on coordinates.');
+                updateText('#current-address-text', 'GPS SIGNAL STABLE');
+                return { city: 'SENTINEL', state: 'INDONESIA' };
+            }
+        }
+
+        async function updateWeather(lat, lng) {
+            const WEATHER_KEY = "9453a77993dad3f98101aac939ab1e2a";
+            
+            // 1. Resolve Location (Non-blocking but aware)
+            const locationPromise = resolveLocation(lat, lng);
+
+            if(!WEATHER_KEY || WEATHER_KEY === 'OPENWEATHER_API_KEY') {
+                console.warn('[WEATHER] Key missing in .env');
+                updateText('#sky-desc', 'SATELLITE KEY MISSING');
+                return;
+            }
+
+            try {
+                // Check Cache
+                const cacheKey = `sentinel_weather_${lat.toFixed(2)}_${lng.toFixed(2)}`;
+                const cached = localStorage.getItem(cacheKey);
+                if(cached) {
+                    const data = JSON.parse(cached);
+                    if(Date.now() - data.ts < 600000) {
+                        applyWeatherData(data.weather);
+                        await locationPromise; // Ensure address HUD is also updated
+                        return;
+                    }
+                }
+
+                // Wait for location resolution to get city name for logging (as requested for sync)
+                const loc = await locationPromise;
+
+                console.log(`[WEATHER] Satellite Link Active for ${loc.city}...`);
+                const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${WEATHER_KEY}&units=metric&lang=id`;
+                const res = await fetch(url);
+                const apiData = await res.json();
+
+                if(apiData.main) {
+                    const weatherObj = {
+                        temp: apiData.main.temp,
+                        feels: apiData.main.feels_like,
+                        humidity: apiData.main.humidity,
+                        wind: apiData.wind.speed * 3.6, // m/s to km/h
+                        pressure: apiData.main.pressure,
+                        desc: apiData.weather[0].description,
+                        main: apiData.weather[0].main,
+                        ts: Date.now()
+                    };
+                    localStorage.setItem(cacheKey, JSON.stringify({ts: Date.now(), weather: weatherObj}));
+                    applyWeatherData(weatherObj);
+                } else if (apiData.cod == 401) {
+                    console.warn('[WEATHER] API Key Activation Pending.');
+                    updateText('#sky-desc', 'SATELLITE LINK PENDING (401)');
+                }
+            } catch (e) { 
+                console.error('[WEATHER] Satellite comms failed:', e);
+                updateText('#sky-desc', 'SIGNAL DISTURBANCE');
+            }
+        }
+
+        function applyWeatherData(w) {
+            const weatherIcons = {
+                'Clear': '<i class="fa-solid fa-sun text-amber-400"></i>',
+                'Clouds': '<i class="fa-solid fa-cloud-sun text-amber-400"></i>',
+                'Rain': '<i class="fa-solid fa-cloud-showers-heavy text-blue-400"></i>',
+                'Drizzle': '<i class="fa-solid fa-cloud-rain text-cyan-400"></i>',
+                'Thunderstorm': '<i class="fa-solid fa-cloud-bolt text-indigo-400"></i>',
+                'Snow': '<i class="fa-solid fa-snowflake text-slate-100"></i>',
+                'Atmosphere': '<i class="fa-solid fa-smog text-slate-300"></i>'
+            };
+
+            const iconHtml = weatherIcons[w.main] || '<i class="fa-solid fa-cloud text-slate-400"></i>';
+            const glowColors = {
+                'Clear': 'bg-amber-400/20', 'Clouds': 'bg-blue-400/10', 'Rain': 'bg-indigo-600/20', 
+                'Thunderstorm': 'bg-purple-600/20', 'Drizzle': 'bg-cyan-600/20'
+            };
+
+            updateHtml('#sky-icon-main', iconHtml);
+            updateText('#sky-temp', `${w.temp.toFixed(1)}°C`);
+            updateText('#sky-feels', `${Math.round(w.feels)}°`);
+            updateText('#sky-desc', w.desc.toUpperCase());
+            updateHtml('#sky-wind', `${w.wind.toFixed(1)} <span class="text-[10px] text-slate-400">KM/H</span>`);
+            updateHtml('#sky-humidity', `${w.humidity.toFixed(0)} <span class="text-[10px] text-slate-400">%</span>`);
+            updateHtml('#sky-pressure', `${w.pressure.toFixed(0)} <span class="text-[10px] text-slate-400">HPA</span>`);
+
+            // Background dynamic glow
+            document.querySelectorAll('#weather-bg-glow').forEach(el => {
+                el.className = `absolute top-0 right-0 w-96 h-96 rounded-full blur-[100px] -mr-48 -mt-48 transition-all duration-1000 ${glowColors[w.main] || 'bg-slate-400/10'}`;
+            });
+
+            // Rainfall detection for correlation (Using main.Rain is unreliable in basic API, so we use 'Rain' group)
+            lastRainIntensity = (w.main === 'Rain' || w.main === 'Drizzle') ? 10 : 0; 
+        }
+
+        function updateDashboard(response) {
+            const data = response.data;
+            const config = response.config || { elevation_mdpl: 14.0, sensor_to_bank: 100, river_depth: 100 };
+            
+            // Check Data Freshness (Heartbeat Check)
+            // Ambil waktu server saat ini dari blade (PHP) sebagai referensi
+            const serverTime = 1777346645 * 1000; 
+            const lastDataTime = new Date(data.created_at).getTime();
+            const diffSeconds = (serverTime - lastDataTime) / 1000;
+            
+            console.log(`[DEBUG] Data Age: ${diffSeconds.toFixed(1)}s`);
+
+            // Jika data lebih dari 30 detik (diperketat), anggap Offline
+            const isStale = diffSeconds > 30;
+
+            if (isStale) {
+                console.warn('STALE DATA DETECTED. Clearing UI...');
+                updateText('#water-level', '--');
+                updateText('#water-percent', 'OFF');
+                updateText('#current-distance', '--');
+                updateText('#distance-to-ground', '--');
+                updateText('#flow-velocity', '0.00');
+                updateText('#connection-text', 'SATELLITE_OFFLINE');
+                
+                // Bersihkan metrik spesifik IT Dashboard
+                updateText('#it-voltage', '0.00 V');
+                updateText('#it-connections', '0');
+                updateText('#it-memory', '-- / --');
+                updateText('#it-cpu-temp', '--');
+                updateText('#it-ping', '0');
+                updateText('#it-qps', '0');
+                updateText('#it-uptime', '0%');
+                
+                const cpuBar = document.getElementById('it-cpu-bar');
+                if(cpuBar) cpuBar.style.width = '0%';
+
+                const dot = document.getElementById('connection-dot');
+                if(dot) { 
+                    dot.className = 'w-2 h-2 rounded-full bg-red-500';
+                }
+                return;
+            }
+
+            // Jika data Fresh, pastikan status Kembali Online
+            updateText('#connection-text', 'SENTINEL ONLINE');
+            const dot = document.getElementById('connection-dot');
+            if(dot) { dot.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse'; }
+
+            const distFloat = parseFloat(data.distance);
+            const validCount = data.valid_count || 0;
+            const tma_mdpl = SENSOR_ELEVATION_MDPL - (distFloat / 100);
+            
+            // DOM Selectors for this cycle
+            const _logEl = document.getElementById('terminal-log');
+            const _signalBar = document.getElementById('signal-bar');
+            const _riverWater = document.getElementById('river-water');
+            const _statusCard = document.getElementById('status-card');
+            const _alertMsg = document.getElementById('alert-message');
+            const _alertIcon = document.getElementById('alert-icon');
+            const _surfaceBadge = document.getElementById('surface-badge');
+            const _surfaceText = document.getElementById('surface-text');
+            const _surfaceIcon = document.getElementById('surface-icon');
+            const _lastUpdated = document.getElementById('last-updated');
+            const _alertBanner = document.getElementById('alert-banner');
+            const _mockVoltage = document.getElementById('mock-voltage');
+            const _mockPing = document.getElementById('mock-ping');
+            const _mockTemp = document.getElementById('mock-temp');
+
+            // Terminal Log
+            if(_logEl) {
+                const now = new Date().toLocaleTimeString('en-US', {hour12:false});
+                const div = document.createElement('div');
+                div.className = tma_mdpl >= SIAGA_1_TMA ? 'text-red-400' : (tma_mdpl >= SIAGA_2_TMA ? 'text-orange-400' : 'text-slate-400');
+                div.innerHTML = `>> [${now}] TELEMETRY: D ${distFloat.toFixed(1)} | Q ${validCount} | TMA ${tma_mdpl.toFixed(2)}`;
+                _logEl.appendChild(div);
+                if(_logEl.children.length > 25) _logEl.removeChild(_logEl.firstChild);
+                _logEl.scrollTop = _logEl.scrollHeight;
+                
+                // Update Last Updated Timestamp
+                if(_lastUpdated) _lastUpdated.textContent = now;
+            }
+
+            // UI Data Sync
+            const elevation_mdpl = parseFloat(config.elevation_mdpl);
+            const sensor_to_bank = parseInt(config.sensor_to_bank);
+            const river_depth = parseInt(config.river_depth);
+
+            const distToGround = sensor_to_bank - distFloat;
+            updateText('#distance-to-ground', distToGround.toFixed(1));
+            updateText('#current-distance', distFloat.toFixed(1));
+            
+            const distEl = document.getElementById('distance-to-ground');
+            if(distEl) {
+                if(distToGround >= 0) {
+                    distEl.classList.remove('text-slate-400');
+                    distEl.classList.add('text-red-500');
+                } else {
+                    distEl.classList.remove('text-red-500');
+                    distEl.classList.add('text-slate-400');
+                }
+            }
+
+            updateText('#valid-count-display', `${validCount}/20`);
+            
+            // Logic TMA (MDPL) Dinamis
+            const tma_mdpl_dynamic = elevation_mdpl - (distFloat / 100.0);
+            updateText('#water-level', tma_mdpl_dynamic.toFixed(2));
+            
+            // Calculate visual percentage (Skala Dinamis)
+            const maxMdpl = elevation_mdpl - (sensor_to_bank / 100.0);
+            const minMdpl = maxMdpl - (river_depth / 100.0);
+            const visualPercent = Math.max(0, Math.min(100, ((tma_mdpl_dynamic - minMdpl) / (maxMdpl - minMdpl)) * 100));
+            updateText('#water-percent', `${visualPercent.toFixed(0)}%`);
+
+            if(_signalBar) _signalBar.style.width = `${(validCount/20)*100}%`;
+
+            // River Animation HUD
+            if(_riverWater) {
+                const visualFill = Math.max(8, visualPercent);
+                _riverWater.style.height = `${visualFill}%`;
+            }
+
+            // Sentinel Health Sync
+            if(_mockVoltage) _mockVoltage.textContent = (5.0 + (Math.random() * 0.04 - 0.02)).toFixed(2) + 'V';
+            if(_mockPing) _mockPing.textContent = (5 + Math.random() * 10).toFixed(0) + 'ms';
+            if(_mockTemp) _mockTemp.textContent = (38 + Math.random() * 5).toFixed(1) + '°C';
+
+            // Alert Logic & Voice
+            let statusColor = "slate-100";
+            let statusLabel = "NORMAL: SUNGAI CITARUM AMAN";
+            let surfaceLabel = "NORMAL";
+            let iconClass = "fa-solid fa-circle-check text-emerald-500";
+            let surfaceIconClass = "fa-solid fa-circle-check";
+
+            if(tma_mdpl >= SIAGA_1_TMA) {
+                statusColor = "red-500";
+                statusLabel = "SIAGA 1: BAHAYA BANJIR KRITIS CITARUM!";
+                surfaceLabel = "SIAGA 1";
+                iconClass = "fa-solid fa-skull-crossbones animate-pulse text-red-500";
+                surfaceIconClass = "fa-solid fa-skull-crossbones";
+                speakAlert("Peringatan Siaga 1! Tinggi Muka Air Sungai Citarum di Karawang mencapai level awas banjir kritis.");
+            } else if(tma_mdpl >= SIAGA_2_TMA) {
+                statusColor = "orange-500";
+                statusLabel = "SIAGA 2: WASPADA DEBIT CITARUM MENINGKAT!";
+                surfaceLabel = "SIAGA 2";
+                iconClass = "fa-solid fa-bell animate-pulse text-orange-500";
+                surfaceIconClass = "fa-solid fa-bell";
+                speakAlert("Peringatan Siaga 2. Debit Sungai Citarum meningkat, warga bantaran harap waspada.");
+            } else if(tma_mdpl >= SIAGA_3_TMA) {
+                statusColor = "amber-500";
+                statusLabel = "SIAGA 3: MONITOR KETINGGIAN AIR CITARUM";
+                surfaceLabel = "SIAGA 3";
+                iconClass = "fa-solid fa-triangle-exclamation text-amber-500";
+                surfaceIconClass = "fa-solid fa-triangle-exclamation";
+            }
+
+            if(_statusCard) {
+                _statusCard.style.borderColor = `var(--tw-border-opacity, 1) rgb(${tma_mdpl >= SIAGA_3_TMA ? (tma_mdpl >= SIAGA_1_TMA ? '239 68 68' : (tma_mdpl >= SIAGA_2_TMA ? '249 115 22' : '245 158 11')) : '241 245 249'})`;
+                _statusCard.className = `glass-panel rounded-3xl p-8 border-2 transition-all duration-500 ${tma_mdpl >= SIAGA_3_TMA ? (tma_mdpl >= SIAGA_1_TMA ? 'shadow-2xl shadow-red-500/10' : (tma_mdpl >= SIAGA_2_TMA ? 'shadow-2xl shadow-orange-500/10' : 'shadow-2xl shadow-amber-500/10')) : 'border-slate-100'}`;
+            }
+
+            if(_alertMsg) _alertMsg.textContent = statusLabel;
+            if(_alertIcon) _alertIcon.className = iconClass;
+            
+            if(_alertBanner) {
+                _alertBanner.classList.remove('hidden');
+                _alertBanner.className = `px-4 py-2 rounded-xl flex items-center space-x-2 transition-all duration-300 ${tma_mdpl >= SIAGA_1_TMA ? 'bg-red-50 text-red-600 border-red-100' : (tma_mdpl >= SIAGA_2_TMA ? 'bg-orange-50 text-orange-600 border-orange-100' : (tma_mdpl >= SIAGA_3_TMA ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'))}`;
+            }
+            
+            if(_surfaceBadge) {
+                // Update Surface Badge Style
+                _surfaceBadge.className = `surface-badge ${tma_mdpl >= SIAGA_1_TMA ? 'bg-red-600' : (tma_mdpl >= SIAGA_2_TMA ? 'bg-orange-600' : (tma_mdpl >= SIAGA_3_TMA ? 'bg-amber-600' : 'bg-slate-900'))} text-white shadow-xl`;
+                if(_surfaceText) _surfaceText.textContent = surfaceLabel;
+                if(_surfaceIcon) _surfaceIcon.className = surfaceIconClass;
+            }
+
+            // Active Zone Highlighting
+            document.querySelectorAll('.level-label').forEach(el => {
+                el.classList.remove('active', 'font-black');
+                el.classList.add('opacity-30');
+            });
+            const activeId = tma_mdpl >= SIAGA_1_TMA ? 'label-siaga1' : (tma_mdpl >= SIAGA_2_TMA ? 'label-siaga2' : (tma_mdpl >= SIAGA_3_TMA ? 'label-siaga3' : 'label-normal'));
+            const targetLabel = document.getElementById(activeId);
+            if(targetLabel) { targetLabel.classList.add('active', 'font-black'); targetLabel.classList.remove('opacity-30'); }
+
+            // Peak/Base Session Records
+            if (tma_mdpl > maxPeak || maxPeak === 0) { maxPeak = tma_mdpl; updateText('#max-peak-level', maxPeak.toFixed(2)); }
+            if (tma_mdpl < minBase || minBase === 9999) { minBase = tma_mdpl; updateText('#min-base-level', minBase.toFixed(2)); }
+
+            // Velocity & ETA Prediction
+            if (previousDepth > 0) {
+                const delta = tma_mdpl - previousDepth;
+                updateText('#flow-velocity', Math.abs(delta).toFixed(2));
+                const etaText = predictETA(tma_mdpl) || 'STABLE';
+                updateText('#eta-overflow', etaText);
+                
+                const etaCard = document.getElementById('eta-card');
+                const etaIcon = document.getElementById('eta-icon');
+                const etaWrapper = document.getElementById('eta-icon-wrapper');
+                const etaLabel = document.getElementById('eta-label');
+                if(etaCard) {
+                    if(etaText === 'STABLE' || etaText.includes('>1 Jam')) {
+                        etaCard.className = 'col-span-2 rounded-3xl p-5 bg-white border border-slate-100 shadow-xl flex items-center justify-between relative overflow-hidden group';
+                        if(etaWrapper) etaWrapper.className = 'h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center border border-blue-100 relative z-10';
+                        if(etaIcon) etaIcon.className = 'fa-solid fa-shield-check text-blue-500';
+                        if(etaLabel) etaLabel.className = 'text-[9px] text-blue-500 font-black mb-1 uppercase tracking-[0.2em]';
+                    } else if(etaText === 'IMMINENT') {
+                        etaCard.className = 'col-span-2 rounded-3xl p-5 bg-red-50 border border-red-100 shadow-lg shadow-red-500/20 flex items-center justify-between relative overflow-hidden group animate-pulse';
+                        if(etaWrapper) etaWrapper.className = 'h-10 w-10 rounded-full bg-red-100 flex items-center justify-center border border-red-200 relative z-10';
+                        if(etaIcon) etaIcon.className = 'fa-solid fa-skull-crossbones text-red-500 animate-bounce';
+                        if(etaLabel) etaLabel.className = 'text-[9px] text-red-500 font-black mb-1 uppercase tracking-[0.2em]';
+                    } else {
+                        etaCard.className = 'col-span-2 rounded-3xl p-5 bg-orange-50 border border-orange-100 shadow-lg shadow-orange-500/20 flex items-center justify-between relative overflow-hidden group';
+                        if(etaWrapper) etaWrapper.className = 'h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center border border-orange-200 relative z-10';
+                        if(etaIcon) etaIcon.className = 'fa-solid fa-stopwatch text-orange-500';
+                        if(etaLabel) etaLabel.className = 'text-[9px] text-orange-500 font-black mb-1 uppercase tracking-[0.2em]';
+                    }
+                }
+                
+                const vCont = document.getElementById('velocity-container');
+                const vIcon = document.getElementById('velocity-icon');
+                if(vCont && vIcon) {
+                    if(delta > 0) {
+                        vCont.className = 'flex items-baseline text-red-500 transition-colors';
+                        vIcon.className = 'fa-solid fa-arrow-up text-xs mr-1 animate-bounce';
+                    } else if(delta < 0) {
+                        vCont.className = 'flex items-baseline text-emerald-500 transition-colors';
+                        vIcon.className = 'fa-solid fa-arrow-down text-xs mr-1';
+                    } else {
+                        vCont.className = 'flex items-baseline text-blue-500 transition-colors';
+                        vIcon.className = 'fa-solid fa-arrow-right text-xs mr-1';
+                    }
+                }
+            }
+            previousDepth = tma_mdpl;
+
+            // Update Graphical HUD
+            if(depthChart || sparklineChart) {
+                const t = new Date().toLocaleTimeString('en-US', {hour12:false});
+                chartData.push(tma_mdpl); chartLabels.push(t);
+                if (chartData.length > MAX_SAMPLES) { chartData.shift(); chartLabels.shift(); }
+                if(depthChart) depthChart.update();
+                if(sparklineChart) sparklineChart.update();
+            }
+
+            // Trend Matrix Logic (Hourly snapshots)
+            if(Date.now() - lastTrendUpdate > 3600000 || trendData24h.length === 0) {
+                trendData24h.push({t: Date.now(), d: tma_mdpl});
+                if(trendData24h.length > 24) trendData24h.shift();
+                lastTrendUpdate = Date.now();
+                updateTrendUI();
+            }
+
+            // Correlation HUD
+            if (lastRainIntensity > 8 && tma_mdpl >= SIAGA_3_TMA) {
+                document.querySelectorAll('#weather-correlation-alert').forEach(el => el.classList.remove('hidden'));
+            } else {
+                document.querySelectorAll('#weather-correlation-alert').forEach(el => el.classList.add('hidden'));
+            }
+        }
+
+        // --- Core Functions ---
+        function predictETA(newDepth) {
+            depthBuffer.push({ t: Date.now(), d: newDepth });
+            if (depthBuffer.length > 15) depthBuffer.shift();
+            if (depthBuffer.length < 5) return null;
+            let xS=0, yS=0, xxS=0, xyS=0, n=depthBuffer.length, t0=depthBuffer[0].t;
+            depthBuffer.forEach(p => {
+                let x=(p.t-t0)/1000, y=p.d;
+                xS+=x; yS+=y; xxS+=x*x; xyS+=x*y;
+            });
+            let m=(n*xyS - xS*yS)/(n*xxS - xS*xS); // m is slope (mdpl per second)
+            if (m <= 0.005) return 'STABLE'; // naik terlalu pelan
+            let rem = SIAGA_1_TMA - newDepth;
+            if (rem <= 0) return 'IMMINENT';
+            let sec = Math.round(rem/m);
+            if (sec < 0) return 'STABLE';
+            return sec > 3600 ? '>1 Jam' : `${Math.floor(sec/60)}m ${sec%60}s`;
+        }
+
+        function speakAlert(text) {
+            if (Date.now() - lastVoiceTime < 30000) return;
+            if ('speechSynthesis' in window) {
+                const u = new SpeechSynthesisUtterance(text);
+                u.lang='id-ID'; u.rate=0.9;
+                window.speechSynthesis.speak(u);
+                lastVoiceTime = Date.now();
+            }
+        }
+
+        function updateTrendUI() {
+            const el = document.getElementById('trend-heatmap');
+            if(!el) return;
+            el.innerHTML = '';
+            trendData24h.forEach(i => {
+                const b = document.createElement('div');
+                b.className = 'flex-1 rounded-full';
+                const percent = Math.max(0, Math.min(100, ((i.d - 12.0) / 1.0) * 100));
+                b.style.height = `${Math.max(10, percent)}%`;
+                b.style.backgroundColor = i.d >= SIAGA_2_TMA ? '#f97316' : '#3b82f6';
+                el.appendChild(b);
+            });
+        }
+
+        // --- Initial Load ---
+        updateWeather(currentLat, currentLng);
+        updateTrendUI();
+        setInterval(() => updateWeather(currentLat, currentLng), 600000);
+    });
+    // CALIBRATION LOGIC
+    function openCalibrationModal(device) {
+        const modal = document.getElementById('calibrationModal');
+        modal.classList.remove('hidden');
+        
+        // Fill data from the clicked device
+        document.getElementById('input_device_slug').value = device.slug;
+        document.getElementById('input_elevation').value = device.elevation_mdpl || 14.00;
+        document.getElementById('input_sensor_to_bank').value = device.sensor_to_bank || 100;
+        document.getElementById('input_river_depth').value = device.river_depth || 100;
+    }
+
+    function closeCalibrationModal() {
+        document.getElementById('calibrationModal').classList.add('hidden');
+    }
+
+    document.getElementById('calibrationForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('saveCalibrationBtn');
+        const originalBtnText = btn.innerHTML;
+        
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> SAVING...';
+        btn.disabled = true;
+
+        const formData = new FormData(this);
+        const data = {
+            device_slug: formData.get('device_slug'),
+            elevation_mdpl: formData.get('elevation_mdpl'),
+            sensor_to_bank: formData.get('sensor_to_bank'),
+            river_depth: formData.get('river_depth'),
+            _token: 'ZAll6yGTtavtoVVvNv0RlLQWSDhWTuYxuVK8dfLV'
+        };
+
+        fetch('/api/device/update-config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': 'ZAll6yGTtavtoVVvNv0RlLQWSDhWTuYxuVK8dfLV'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(res => {
+            if(res.status === 'success') {
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> SUCCESS!';
+                btn.classList.remove('bg-slate-900');
+                btn.classList.add('bg-emerald-500');
+                
+                setTimeout(() => {
+                    closeCalibrationModal();
+                    // Reset button
+                    btn.innerHTML = originalBtnText;
+                    btn.classList.add('bg-slate-900');
+                    btn.classList.remove('bg-emerald-500');
+                    btn.disabled = false;
+                }, 1500);
+            }
+        })
+        .catch(err => {
+            alert('Gagal menyimpan konfigurasi');
+            btn.innerHTML = originalBtnText;
+            btn.disabled = false;
+        });
+    });
+</script>
+    
+    <script>
+        // Live Clock logic
+        setInterval(() => {
+            const clockEl = document.getElementById('live-clock');
+            if(clockEl) {
+                clockEl.textContent = new Date().toLocaleTimeString('id-ID', { hour12: false }) + ' WIB';
+            }
+        }, 1000);
+
+        // Override weather correlation visibility logic specifically for Cockpit layout
+        document.addEventListener('DOMContentLoaded', () => {
+            const originalWeatherUpdate = window.updateWeatherWidget;
+            if(originalWeatherUpdate) {
+                window.updateWeatherWidget = function(data) {
+                    originalWeatherUpdate(data);
+                    // Check if rain
+                    const isRaining = data.weather[0].main.toLowerCase().includes('rain') || 
+                                     data.weather[0].description.toLowerCase().includes('hujan');
+                    
+                    const rainOverlay = document.getElementById('weather-rain');
+                    if(rainOverlay) {
+                        if(isRaining) {
+                            rainOverlay.classList.add('active');
+                        } else {
+                            rainOverlay.classList.remove('active');
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>
