@@ -1,6 +1,45 @@
 @include('partials.dashboard.head')
 
+<style>
+    /* DIRECT CACHE BYPASS CSS - ASSEMBLY SYSTEM */
+    @keyframes revealFromLeft {
+        0% { opacity: 0; transform: translateX(-100px); filter: blur(20px); }
+        100% { opacity: 1; transform: translateX(0); filter: blur(0); }
+    }
+    @keyframes revealFromRight {
+        0% { opacity: 0; transform: translateX(100px); filter: blur(20px); }
+        100% { opacity: 1; transform: translateX(0); filter: blur(0); }
+    }
+    @keyframes revealFromBottom {
+        0% { opacity: 0; transform: translateY(100px); filter: blur(20px); }
+        100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+    }
+
+    .v-reveal-left, .v-reveal-right, .v-reveal-bottom {
+        opacity: 0;
+        animation-duration: 1.5s;
+        animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+        animation-fill-mode: forwards;
+    }
+
+    body.loaded .v-reveal-left { animation-name: revealFromLeft; }
+    body.loaded .v-reveal-right { animation-name: revealFromRight; }
+    body.loaded .v-reveal-bottom { animation-name: revealFromBottom; }
+
+    /* Precise Staggered Delays - 0.4s Interval for Maximum Drama */
+    body.loaded .delay-1 { animation-delay: 0.2s !important; }
+    body.loaded .delay-2 { animation-delay: 0.6s !important; }
+    body.loaded .delay-3 { animation-delay: 1.0s !important; }
+    body.loaded .delay-4 { animation-delay: 1.4s !important; }
+    body.loaded .delay-5 { animation-delay: 1.8s !important; }
+    body.loaded .delay-6 { animation-delay: 2.2s !important; }
+    body.loaded .delay-7 { animation-delay: 2.6s !important; }
+    body.loaded .delay-8 { animation-delay: 3.0s !important; }
+</style>
+
 <body class="min-h-screen relative antialiased selection:bg-blue-200 selection:text-blue-900 pb-10 bg-slate-50 overflow-x-hidden">
+    
+
 
     <!-- Top Accent Line -->
     <div class="fixed top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 z-50"></div>
@@ -12,12 +51,12 @@
         @include('partials.dashboard.header')
 
         <!-- Unified Cockpit Interface -->
-        <div class="glass-panel rounded-[2.5rem] p-4 lg:p-6 mt-4 bg-white/60 shadow-2xl backdrop-blur-2xl border border-white/80 animate-assemble-bg" style="opacity: 0; perspective: 2500px;">
+        <div class="glass-panel rounded-[2.5rem] p-4 lg:p-6 mt-4 bg-white/60 shadow-2xl backdrop-blur-2xl border border-white/80" style="perspective: 2500px;">
             
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch transform-style-3d">
                 
                 <!-- Column 1: Weather & Guides (3 Cols) -->
-                <div class="lg:col-span-3 flex flex-col space-y-4 animate-assemble-left" style="opacity: 0;">
+                <div class="lg:col-span-3 flex flex-col space-y-4">
                     
                     <!-- Title inside the cockpit -->
                     <div class="mb-4 flex flex-col space-y-4">
@@ -65,7 +104,7 @@
                     </div>
 
                     <!-- Compact Weather -->
-                    <div class="rounded-3xl p-5 relative overflow-hidden bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/30 group">
+                    <div class="v-reveal-left delay-1 rounded-3xl p-5 relative overflow-hidden bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/30 group">
                         <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all"></div>
                         <div class="relative z-10">
                             <div class="flex items-center space-x-2 mb-3">
@@ -75,8 +114,8 @@
                             <div class="flex items-center space-x-4 mb-4">
                                 <div id="sky-icon-main" class="text-5xl filter drop-shadow-md"><i class="fa-solid fa-cloud-sun text-amber-300"></i></div>
                                 <div>
-                                    <div id="sky-temp" class="text-4xl font-black tracking-tighter leading-none">--°C</div>
-                                    <div id="sky-desc" class="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-1">Memuat...</div>
+                                    <div id="sky-temp" class="text-4xl font-black tracking-tighter leading-none skeleton w-24 h-10 mb-1"></div>
+                                    <div id="sky-desc" class="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-1 skeleton w-32 h-3"></div>
                                 </div>
                             </div>
                             <div class="flex items-center justify-between pt-3 border-t border-white/20">
@@ -96,7 +135,7 @@
 
 
                     <!-- Compact Status Guide -->
-                    <div class="rounded-3xl p-5 bg-white border border-slate-100 shadow-sm flex-1">
+                    <div class="v-reveal-left delay-2 rounded-3xl p-5 bg-white border border-slate-100 shadow-sm flex-1">
                         <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 flex items-center">
                             <i class="fa-solid fa-circle-info mr-2"></i> Panduan
                         </h3>
@@ -122,9 +161,9 @@
                 </div>
 
                 <!-- Column 2: The Core River Visual (5 Cols) -->
-                <div class="lg:col-span-5 relative min-h-[400px] xl:min-h-[500px] flex items-stretch animate-assemble-center" style="opacity: 0;">
+                <div class="lg:col-span-5 relative min-h-[400px] xl:min-h-[500px] flex items-stretch">
                     <!-- Glass Tank natively occupying the space without its own panel background -->
-                    <div class="glass-tank-container relative w-full h-full rounded-[2rem] shadow-[inset_0_0_50px_rgba(0,0,0,0.05)] bg-slate-100/50 border-4 border-white/60 overflow-hidden">
+                    <div class="v-reveal-bottom delay-3 glass-tank-container relative w-full h-full rounded-[2rem] shadow-[inset_0_0_50px_rgba(0,0,0,0.05)] bg-slate-100/50 border-4 border-white/60 overflow-hidden">
                         
                         <!-- Immersive Weather Overlay -->
                         <div class="weather-rain" id="weather-rain">
@@ -175,10 +214,10 @@
                 </div>
 
                 <!-- Column 3: Telemetry & Alerts (4 Cols) -->
-                <div class="lg:col-span-4 flex flex-col justify-center space-y-4 animate-assemble-right" style="opacity: 0;">
+                <div class="lg:col-span-4 flex flex-col justify-center space-y-4">
                     
                     <!-- Alert Banner (Integrated) -->
-                    <div id="alert-banner" class="px-5 py-3 rounded-2xl flex items-center space-x-3 transition-all duration-300 bg-emerald-50 text-emerald-600 border border-emerald-100 hidden">
+                    <div id="alert-banner" class="v-reveal-right delay-4 px-5 py-3 rounded-2xl flex items-center space-x-3 transition-all duration-300 bg-emerald-50 text-emerald-600 border border-emerald-100 hidden">
                         <i id="alert-icon" class="fa-solid fa-shield-check text-3xl"></i>
                         <div>
                             <div class="text-[10px] font-black tracking-widest uppercase mb-1">Status Sungai</div>
@@ -189,13 +228,13 @@
                     <!-- Main KPI & Map Row -->
                     <div class="grid grid-cols-2 gap-4 flex-1">
                         <!-- Main TMA KPI (Massive) -->
-                        <div class="rounded-[2rem] p-6 bg-white border border-slate-100 shadow-sm relative overflow-hidden group hover:border-blue-200 transition-colors flex flex-col justify-center">
+                        <div class="v-reveal-right delay-5 rounded-[2rem] p-6 bg-white border border-slate-100 shadow-sm relative overflow-hidden group hover:border-blue-200 transition-colors flex flex-col justify-center">
                             <div class="absolute -right-6 -bottom-6 opacity-5 group-hover:opacity-10 transition-opacity">
                                 <i class="fa-solid fa-water text-8xl"></i>
                             </div>
                             <h3 class="text-[10px] text-slate-400 font-black mb-3 uppercase tracking-[0.2em] relative z-10">Tinggi Permukaan Air</h3>
                             <div class="flex items-baseline mb-4 relative z-10">
-                                <div id="water-level" class="text-5xl xl:text-6xl font-black text-slate-800 odometer tracking-tighter leading-none font-rajdhani">--</div>
+                                <div id="water-level" class="text-5xl xl:text-6xl font-black text-slate-800 odometer tracking-tighter leading-none font-rajdhani skeleton w-32 h-14"></div>
                                 <span class="text-lg text-blue-500 font-bold ml-2">MDPL</span>
                             </div>
                             <div class="flex items-center space-x-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 inline-flex px-3 py-1.5 rounded-lg border border-slate-100 relative z-10">
@@ -210,7 +249,7 @@
                         </div>
 
                         <!-- GIS Satellite Map -->
-                        <div class="rounded-[2rem] p-2 bg-white border border-slate-100 shadow-xl overflow-hidden relative flex flex-col">
+                        <div class="v-reveal-right delay-6 rounded-[2rem] p-2 bg-white border border-slate-100 shadow-xl overflow-hidden relative flex flex-col">
                             <div class="absolute top-4 left-4 z-[400] flex items-center bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
                                 <span class="w-2 h-2 rounded-full bg-blue-500 mr-2 animate-ping" id="map-radar-dot"></span>
                                 <span class="text-[9px] font-black uppercase text-slate-600 tracking-widest">Satelit Aktif</span>
@@ -221,15 +260,15 @@
 
                     <!-- Advanced Metrics Grid (Distance, Velocity, ETA) -->
                     <div class="grid grid-cols-2 gap-4">
-                        <div class="rounded-3xl p-5 bg-white border border-slate-100 shadow-sm flex flex-col justify-center">
+                        <div class="v-reveal-bottom delay-7 rounded-3xl p-5 bg-white border border-slate-100 shadow-sm flex flex-col justify-center">
                             <h3 class="text-[9px] text-slate-400 font-black mb-1 uppercase tracking-[0.2em] leading-tight">Jarak Sensor</h3>
                             <div class="flex items-baseline">
-                                <span id="current-distance" class="text-3xl font-bold text-slate-700 odometer font-rajdhani">--</span>
+                                <span id="current-distance" class="text-3xl font-bold text-slate-700 odometer font-rajdhani skeleton w-16 h-8"></span>
                                 <span class="text-xs text-slate-400 font-bold ml-1">cm</span>
                             </div>
                         </div>
                         
-                        <div class="rounded-3xl p-5 bg-white border border-slate-100 shadow-sm flex flex-col justify-center">
+                        <div class="v-reveal-bottom delay-8 rounded-3xl p-5 bg-white border border-slate-100 shadow-sm flex flex-col justify-center">
                             <h3 class="text-[9px] text-slate-400 font-black mb-1 uppercase tracking-[0.2em] leading-tight">Laju Air</h3>
                             <div class="flex items-baseline text-blue-500 transition-colors" id="velocity-container">
                                 <i class="fa-solid fa-arrow-right text-xs mr-1" id="velocity-icon"></i>
@@ -238,7 +277,7 @@
                             </div>
                         </div>
 
-                        <div class="col-span-2 rounded-3xl p-5 bg-white border border-slate-100 shadow-xl flex items-center justify-between relative overflow-hidden group" id="eta-card">
+                        <div class="v-reveal-bottom delay-8 col-span-2 rounded-3xl p-5 bg-white border border-slate-100 shadow-xl flex items-center justify-between relative overflow-hidden group" id="eta-card">
                             <!-- AI Decorator -->
                             <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
                                 <i class="fa-solid fa-microchip text-6xl text-blue-500"></i>
@@ -263,6 +302,23 @@
     @include('partials.dashboard.scripts')
     
     <script>
+        // Trigger Animations Faster (DOMContentLoaded)
+        function triggerReveal() {
+            if(!document.body.classList.contains('loaded')) {
+                console.log('[SENTINEL-SYSTEM] Triggering Sequential Reveal...');
+                document.body.classList.add('loaded'); 
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', triggerReveal);
+        window.addEventListener('load', triggerReveal); // Backup
+        setTimeout(triggerReveal, 3000); // EMERGENCY FAIL-SAFE (3 Seconds)
+
+        // Clean skeletons (optional after long delay)
+        setTimeout(() => {
+            document.querySelectorAll('.skeleton-item-to-remove').forEach(el => el.classList.remove('skeleton'));
+        }, 5000);
+
         // Live Clock logic
         setInterval(() => {
             const clockEl = document.getElementById('live-clock');

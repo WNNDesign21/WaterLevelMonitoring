@@ -27,8 +27,18 @@
         // trendData24h will start empty until real data arrives
         
         // --- DOM Selectors (Multi-instance safe helpers) ---
-        const updateText = (selector, text) => document.querySelectorAll(selector).forEach(el => el.textContent = text);
-        const updateHtml = (selector, html) => document.querySelectorAll(selector).forEach(el => el.innerHTML = html);
+        const updateText = (selector, text) => {
+            document.querySelectorAll(selector).forEach(el => {
+                el.textContent = text;
+                el.classList.remove('skeleton', 'w-24', 'h-10', 'w-32', 'h-3', 'w-16', 'h-8', 'h-14');
+            });
+        };
+        const updateHtml = (selector, html) => {
+            document.querySelectorAll(selector).forEach(el => {
+                el.innerHTML = html;
+                el.classList.remove('skeleton', 'w-24', 'h-10', 'w-32', 'h-3', 'w-16', 'h-8', 'h-14');
+            });
+        };
 
         // --- Echo / WebSocket Initialization ---
         window.echoInstance = null;
