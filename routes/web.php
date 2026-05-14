@@ -33,7 +33,7 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // Public Dashboard (Guest Access) - Under Lockdown Protection
-Route::middleware(['auth', 'password.change.enforce', 'system.lockdown'])->group(function() {
+Route::middleware(['system.lockdown'])->group(function() {
     Route::get('/', function () {
         $primaryDevice = \App\Models\Device::where('slug', 'node-wifi-wemos-d1-69f01e5649f84')->first();
         $allDevices = \App\Models\Device::where('status', '!=', 'maintenance')->get();
