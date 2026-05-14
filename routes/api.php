@@ -7,8 +7,10 @@ use App\Http\Controllers\Api\DeviceHeartbeatController;
 use App\Http\Controllers\Api\WaterLevelHistoryController;
 use App\Http\Controllers\Api\NotificationApiController;
 
+Route::get('/devices', [SensorDataController::class, 'list']);
 Route::get('/devices/heartbeat', [DeviceHeartbeatController::class, 'check']);
 Route::get('/sensor-data/latest/{slug?}', [SensorDataController::class, 'latest']);
+Route::get('/sensor-data/stats/{slug}', [SensorDataController::class, 'stats']);
 Route::post('/sensor-data', [SensorDataController::class, 'store']);
 Route::post('/device/status', [SensorDataController::class, 'updateStatus']);
 Route::post('/device/update-config', [SensorDataController::class, 'updateConfig']);

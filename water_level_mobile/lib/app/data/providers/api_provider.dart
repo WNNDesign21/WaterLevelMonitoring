@@ -46,4 +46,36 @@ class ApiProvider {
     } catch (_) {}
     return null;
   }
+
+  /// Fetch water level history for a device
+  Future<Map<String, dynamic>?> fetchHistory({
+    required String slug,
+    String range = 'daily',
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/water-level/history?device_slug=$slug&range=$range');
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Fetch active alerts
+  Future<List<dynamic>> fetchActiveAlerts({String? slug}) async {
+    try {
+      String url = '$baseUrl/notifications/active-alert';
+      if (slug != null) url += '?device_slug=$slug';
+      final uri = Uri.parse(url);
+      final response = await http.get(uri).timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200) {
+        final body = json.decode(response.body);
+        if (body['status'] == 'success') {
+          return body['alerts'] ?? [];
+        }
+      }
+    } catch (_) {}
+    return [];
+  }
 }

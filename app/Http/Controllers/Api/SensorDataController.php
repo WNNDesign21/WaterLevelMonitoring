@@ -99,7 +99,7 @@ class SensorDataController extends Controller
 
         if (!$device) {
             return response()->json([
-                'status' => 'error',
+                'status' => 'success', // Kept as success for mobile app compatibility sometimes, or check logic
                 'message' => 'Device not found',
                 'data' => null
             ], 404);
@@ -109,10 +109,10 @@ class SensorDataController extends Controller
 
         if (!$data) {
             return response()->json([
-                'status' => 'error',
+                'status' => 'success',
                 'message' => 'No sensor data found',
                 'data' => null
-            ], 404);
+            ], 200); // Return 200 with null data is often safer for mobile
         }
 
         return response()->json([
@@ -123,6 +123,56 @@ class SensorDataController extends Controller
                 'elevation_mdpl' => $device->elevation_mdpl ?? 14.00,
                 'sensor_to_bank' => $device->sensor_to_bank ?? 100,
                 'river_depth' => $device->river_depth ?? 100,
+            ]
+        ]);
+    }
+
+    public function list()
+    {
+        $devices = \App\Models\Device::all()->map(function($device) {
+            $latestData = SensorData::where('device_id', $device->id)->latest()->first();
+            
+            // Basic Status Logic (Matching web dashboard)
+            $status = 'Aman';
+            if ($latestData) {
+                $distToBank = $device->sensor_to_bank - $latestData->distance;
+                if ($distToBank >= 0) $status = 'Siaga 1';
+                else if ($distToBank >= -20) $status = 'Siaga 2';
+                else if ($distToBank >= -50) $status = 'Siaga 3';
+            }
+
+            return array_merge($device->toArray(), [
+                'latest_distance' => $latestData->distance ?? null,
+                'siaga_status' => $device->status === 'online' ? $status : 'Offline',
+                'last_update' => $latestData ? $latestData->created_at->toIso8601String() : null
+            ]);
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $devices
+        ]);
+    }
+
+    public function stats($slug)
+    {
+        $device = \App\Models\Device::where('slug', $slug)->first();
+        
+        if (!$device) {
+            return response()->json(['status' => 'error', 'message' => 'Device not found'], 404);
+        }
+
+        $stats = SensorData::where('device_id', $device->id)
+            ->where('created_at', '>=', now()->subDay())
+            ->selectRaw('AVG(distance) as avg, MIN(distance) as min, MAX(distance) as max')
+            ->first();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'avg_distance' => round($stats->avg ?? 0, 2),
+                'min_distance' => round($stats->min ?? 0, 2),
+                'max_distance' => round($stats->max ?? 0, 2),
             ]
         ]);
     }

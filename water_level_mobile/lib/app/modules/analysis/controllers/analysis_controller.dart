@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:syncfusion_flutter_datepicker/datepicker.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../home/controllers/home_controller.dart';
+import '../../../data/providers/api_provider.dart';
 
 class AnalysisController extends GetxController {
   final homeController = Get.find<HomeController>();
@@ -39,10 +40,53 @@ class AnalysisController extends GetxController {
     
     isLoading.value = true;
     try {
-      // Mock delay for UI feeling
-      await Future.delayed(const Duration(milliseconds: 800));
-      _generateMockData();
+      final apiProvider = Get.find<ApiProvider>(); // Or use homeController._apiProvider if it's public
       
+      String rangeParam = 'daily';
+      if (selectedPeriod.value == 'Harian') rangeParam = 'daily';
+      else if (selectedPeriod.value == 'Mingguan') rangeParam = 'weekly';
+      else if (selectedPeriod.value == 'Bulanan') rangeParam = 'monthly';
+      else if (selectedPeriod.value == 'Tahunan') rangeParam = 'yearly';
+      else if (selectedPeriod.value == 'Custom') rangeParam = 'custom';
+
+      final response = await apiProvider.fetchHistory(
+        slug: homeController.selectedDeviceSlug.value,
+        range: rangeParam,
+      );
+
+      if (response != null && response['status'] == 'success') {
+        final List<dynamic> data = response['data'];
+        
+        double sum = 0;
+        double min = 9999.0;
+        double max = -9999.0;
+
+        historyData.value = data.map((item) {
+          final level = (item['y'] as num).toDouble();
+          sum += level;
+          if (level < min) min = level;
+          if (level > max) max = level;
+
+          return {
+            'time': DateTime.parse(item['t']),
+            'level': level,
+            'min': (item['min'] as num).toDouble(),
+            'max': (item['max'] as num).toDouble(),
+            'status': level > 1.8 ? 'Siaga 1' : 'Aman',
+          };
+        }).toList();
+
+        if (data.isNotEmpty) {
+          averageLevel.value = sum / data.length;
+          minLevel.value = min;
+          maxLevel.value = max;
+        } else {
+          averageLevel.value = 0;
+          minLevel.value = 0;
+          maxLevel.value = 0;
+        }
+        totalSamples.value = data.length;
+      }
     } catch (e) {
       debugPrint('Error fetching history: $e');
     } finally {
@@ -210,36 +254,6 @@ class AnalysisController extends GetxController {
     );
   }
 
-  void _generateMockData() {
-    final List<Map<String, dynamic>> mock = [];
-    final now = DateTime.now();
-    double sum = 0;
-    double min = 10.0;
-    double max = 0.0;
-    
-    // Create a more realistic "fluctuating" data set
-    for (int i = 23; i >= 0; i--) {
-      final time = now.subtract(Duration(hours: i));
-      final level = 1.3 + (0.3 * (i % 7 / 7.0)) + (0.2 * (i % 3 / 3.0));
-      
-      sum += level;
-      if (level < min) min = level;
-      if (level > max) max = level;
-
-      mock.add({
-        'time': time,
-        'level': level,
-        'status': level > 1.8 ? 'Siaga 1' : 'Aman',
-      });
-    }
-    
-    averageLevel.value = sum / mock.length;
-    minLevel.value = min;
-    maxLevel.value = max;
-    totalSamples.value = mock.length;
-    historyData.value = mock;
-  }
-  
   String get periodLabel {
     if (selectedPeriod.value == 'Custom') {
       return '${DateFormat('dd MMM').format(startDate.value)} - ${DateFormat('dd MMM').format(endDate.value)}';

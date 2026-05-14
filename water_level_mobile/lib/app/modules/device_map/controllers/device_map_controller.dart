@@ -42,33 +42,19 @@ class DeviceMapController extends GetxController {
     isLoading.value = true;
     final list = await _apiProvider.fetchDevices();
     
-    // Simulate dynamic water level statuses for demonstration of enterprise features
-    final enrichedList = list.map((device) {
-      final updatedDevice = Map<String, dynamic>.from(device);
-      // Mocking status if not present (to show off UI colors)
-      if (updatedDevice['slug'] == 'node-001') {
-        updatedDevice['siaga_status'] = 'Aman';
-      } else if (updatedDevice['slug'] == 'node-002') {
-        updatedDevice['siaga_status'] = 'Siaga 2';
-      } else {
-        updatedDevice['siaga_status'] = 'Waspada';
-      }
-      return updatedDevice;
-    }).toList();
-
-    devices.value = enrichedList;
+    devices.value = list;
     isLoading.value = false;
     
-    if (enrichedList.isNotEmpty) {
+    if (list.isNotEmpty) {
       final savedSlug = _storage.read<String>('selected_device_slug');
       if (savedSlug != null) {
-        final savedDevice = enrichedList.firstWhere(
+        final savedDevice = list.firstWhere(
           (d) => d['slug'] == savedSlug,
-          orElse: () => enrichedList.first,
+          orElse: () => list.first,
         );
         selectDevice(savedDevice);
       } else {
-        selectDevice(enrichedList.first);
+        selectDevice(list.first);
       }
     }
   }
