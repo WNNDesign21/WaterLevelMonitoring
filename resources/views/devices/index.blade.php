@@ -24,6 +24,10 @@
         0% { opacity: 0; transform: scale(0.9); filter: blur(20px); }
         100% { opacity: 1; transform: scale(1); filter: blur(0); }
     }
+    @keyframes scan {
+        0% { transform: translateY(-100%); }
+        100% { transform: translateY(100%); }
+    }
 
     .v-reveal-left, .v-reveal-right, .v-reveal-bottom, .v-reveal-top, .v-reveal-scale {
         opacity: 0;
@@ -152,8 +156,22 @@
         
         <!-- GIS ASSET LOCATOR (NEW) -->
         <div class="mb-10 relative z-20">
-            <div class="glass-panel p-2 rounded-[2.5rem] bg-slate-100 border border-white shadow-2xl overflow-hidden relative v-reveal-scale delay-2" style="height: 400px; will-change: transform, opacity;">
-                <div id="master-map" class="w-full h-full rounded-[2.2rem] z-10 opacity-0 transition-opacity duration-1000 bg-slate-200"></div>
+            <div class="glass-panel p-2 rounded-[2.5rem] bg-slate-900 border border-white shadow-2xl overflow-hidden relative v-reveal-scale delay-2" style="height: 400px; will-change: transform, opacity;">
+                <!-- High-Tech Placeholder Background -->
+                <div id="master-map-placeholder" class="absolute inset-0 z-0 bg-cover bg-center opacity-50" style="background-image: url('{{ asset('assets/img/maps/earth_placeholder.png') }}'); filter: saturate(0.5) brightness(0.8);"></div>
+                
+                <!-- Sentinel Scanning Overlay -->
+                <div id="sentinel-scanner" class="absolute inset-0 z-20 pointer-events-none overflow-hidden hidden">
+                    <div class="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-500/10 to-transparent h-[200%] -translate-y-full animate-[scan_3s_linear_infinite]"></div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="flex flex-col items-center">
+                            <div class="w-16 h-16 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin"></div>
+                            <span class="text-[9px] font-black text-cyan-400 uppercase tracking-[0.4em] mt-4 animate-pulse">Establishing Satellite Link...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="master-map" class="w-full h-full rounded-[2.2rem] z-10 opacity-0 transition-opacity duration-1000 bg-transparent"></div>
                 
                 <!-- Map Legend -->
                 <div class="absolute bottom-6 left-6 z-[1000] bg-white/95 backdrop-blur-md border border-slate-200 p-4 rounded-2xl shadow-xl">
@@ -459,28 +477,45 @@
 
         // Initialize on load with Fly-In Sequence
         document.addEventListener('DOMContentLoaded', () => {
+            const scanner = document.getElementById('sentinel-scanner');
+            const placeholder = document.getElementById('master-map-placeholder');
+            
             setTimeout(() => {
+                if(scanner) scanner.classList.remove('hidden');
+                
                 initMasterMap();
                 const mapEl = document.getElementById('master-map');
-                if(mapEl) mapEl.style.opacity = '1';
+                
+                // Hide scanner and placeholder once tiles start loading
+                if(map) {
+                    map.on('tileload', () => {
+                        if(mapEl) mapEl.style.opacity = '1';
+                        setTimeout(() => {
+                            if(scanner) scanner.classList.add('opacity-0');
+                            if(placeholder) placeholder.classList.add('opacity-0');
+                            setTimeout(() => {
+                                if(scanner) scanner.remove();
+                                if(placeholder) placeholder.remove();
+                            }, 1000);
+                        }, 500);
+                    });
+                }
                 
                 // --- CINEMATIC FLY-IN SEQUENCE ---
                 setTimeout(() => {
                     if(map) {
                         map.invalidateSize();
-                        // Flying to Karawang Sector from Space
                         map.flyTo([-6.3227, 107.3376], 12, {
                             animate: true,
-                            duration: 4, // 4 seconds of smooth flight
+                            duration: 4,
                             easeLinearity: 0.25
                         });
                         
-                        // Re-enable scroll zoom after landing
                         setTimeout(() => {
                             map.scrollWheelZoom.enable();
                         }, 4000);
                     }
-                }, 800); // Wait for container reveal animation to be almost done
+                }, 800);
             }, 500);
         });
     </script>
