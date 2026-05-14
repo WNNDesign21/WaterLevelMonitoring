@@ -156,7 +156,7 @@
         
         <!-- GIS ASSET LOCATOR (NEW) -->
         <div class="mb-10 relative z-20">
-            <div class="glass-panel p-2 rounded-[2.5rem] bg-slate-900 border border-white shadow-2xl overflow-hidden relative v-reveal-scale delay-2" style="height: 400px; will-change: transform, opacity;">
+            <div class="glass-panel p-2 rounded-[2.5rem] bg-slate-900 shadow-2xl overflow-hidden relative v-reveal-scale delay-2" style="height: 400px; will-change: transform, opacity;">
                 <!-- High-Tech Placeholder Background -->
                 <div id="master-map-placeholder" class="absolute inset-0 z-0 bg-cover bg-center opacity-50" style="background-image: url('{{ asset('assets/img/maps/earth_placeholder.png') }}'); filter: saturate(0.5) brightness(0.8);"></div>
                 
