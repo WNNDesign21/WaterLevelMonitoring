@@ -24,6 +24,10 @@
         0% { opacity: 0; transform: scale(0.9); filter: blur(20px); }
         100% { opacity: 1; transform: scale(1); filter: blur(0); }
     }
+    @keyframes scan {
+        0% { transform: translateY(-100%); }
+        100% { transform: translateY(100%); }
+    }
 
     .v-reveal-left, .v-reveal-right, .v-reveal-bottom, .v-reveal-top, .v-reveal-scale {
         opacity: 0;
@@ -134,16 +138,16 @@
         
         <!-- Header Hero Section (Light) -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 mb-8 md:mb-12">
-            <div class="lg:col-span-8 v-reveal-left delay-2 text-center md:text-left">
+            <div class="lg:col-span-8 v-reveal-left delay-1 text-center md:text-left">
                 <h2 class="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter mb-4 leading-tight">Device Node <br class="md:hidden"><span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-700 font-black">Infrastructure</span></h2>
                 <p class="text-slate-500 text-sm md:text-lg max-w-2xl leading-relaxed font-medium">Kelola seluruh armada sensor telemetri Anda dengan presisi tingkat militer. Pantau status konektivitas, kalibrasi sensor, dan konfigurasi GPS secara terpusat.</p>
             </div>
             <div class="lg:col-span-4 grid grid-cols-2 gap-4">
-                <div class="v-reveal-bottom delay-3 bg-white border border-slate-200 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 flex flex-col justify-center shadow-sm">
+                <div class="v-reveal-bottom delay-2 bg-white border border-slate-200 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 flex flex-col justify-center shadow-sm">
                     <span class="text-[8px] md:text-[10px] font-black text-cyan-600 uppercase tracking-widest mb-1 md:mb-2">Total Nodes</span>
                     <div class="text-2xl md:text-4xl font-black text-slate-800 font-mono tracking-tighter">{{ count($devices) }}</div>
                 </div>
-                <div class="v-reveal-bottom delay-3 bg-white border border-slate-200 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 flex flex-col justify-center shadow-sm">
+                <div class="v-reveal-bottom delay-2 bg-white border border-slate-200 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 flex flex-col justify-center shadow-sm">
                     <span class="text-[8px] md:text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1 md:mb-2">Active Signal</span>
                     <div class="text-2xl md:text-4xl font-black text-slate-800 font-mono tracking-tighter">{{ $devices->where('status', 'online')->count() }}</div>
                 </div>
@@ -151,9 +155,23 @@
         </div>
         
         <!-- GIS ASSET LOCATOR (NEW) -->
-        <div class="v-reveal-right delay-1 mb-10">
-            <div class="glass-panel p-2 rounded-[2.5rem] bg-white border border-white shadow-2xl overflow-hidden relative" style="height: 400px;">
-                <div id="master-map" class="w-full h-full rounded-[2.2rem] z-10 opacity-0 transition-opacity duration-1000"></div>
+        <div class="mb-10 relative z-20">
+            <div class="glass-panel p-2 rounded-[2.5rem] bg-slate-900 border border-white shadow-2xl overflow-hidden relative v-reveal-scale delay-2" style="height: 400px; will-change: transform, opacity;">
+                <!-- High-Tech Placeholder Background -->
+                <div id="master-map-placeholder" class="absolute inset-0 z-0 bg-cover bg-center opacity-50" style="background-image: url('{{ asset('assets/img/maps/earth_placeholder.png') }}'); filter: saturate(0.5) brightness(0.8);"></div>
+                
+                <!-- Sentinel Scanning Overlay -->
+                <div id="sentinel-scanner" class="absolute inset-0 z-20 pointer-events-none overflow-hidden hidden">
+                    <div class="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-500/10 to-transparent h-[200%] -translate-y-full animate-[scan_3s_linear_infinite]"></div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="flex flex-col items-center">
+                            <div class="w-16 h-16 border-2 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin"></div>
+                            <span class="text-[9px] font-black text-cyan-400 uppercase tracking-[0.4em] mt-4 animate-pulse">Establishing Satellite Link...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="master-map" class="w-full h-full rounded-[2.2rem] z-10 opacity-0 transition-opacity duration-1000 bg-transparent"></div>
                 
                 <!-- Map Legend -->
                 <div class="absolute bottom-6 left-6 z-[1000] bg-white/95 backdrop-blur-md border border-slate-200 p-4 rounded-2xl shadow-xl">
@@ -191,7 +209,7 @@
         <!-- Advanced Device Matrix (Light Mode) -->
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
             @foreach($devices as $index => $device)
-            <div class="v-reveal-bottom delay-{{ ($index % 5) + 5 }} group relative bg-white hover:bg-slate-50 border border-slate-200 hover:border-cyan-500/50 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 transition-all duration-500 shadow-md hover:shadow-2xl hover:shadow-cyan-500/10 overflow-hidden">
+            <div class="v-reveal-bottom delay-{{ ($index % 5) + 4 }} group relative bg-white hover:bg-slate-50 border border-slate-200 hover:border-cyan-500/50 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 transition-all duration-500 shadow-md hover:shadow-2xl hover:shadow-cyan-500/10 overflow-hidden">
                 
                 <!-- Status Badge -->
                 <div class="absolute top-6 md:top-8 right-6 md:right-8 flex items-center space-x-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
@@ -390,10 +408,12 @@
         let markers = {};
 
         function initMasterMap() {
+            // Start with a "Global View" (Zoom level 2)
             map = L.map('master-map', {
                 zoomControl: false,
-                attributionControl: false
-            }).setView([-6.3227, 107.3376], 12);
+                attributionControl: false,
+                scrollWheelZoom: false // Disable during animation
+            }).setView([-2.5489, 118.0149], 2); // Center of Indonesia but zoomed way out
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19
@@ -415,6 +435,7 @@
             @endforeach
         }
 
+        // ... (addMapMarker function remains same) ...
         function addMapMarker(lat, lng, name, status, slug) {
             const color = status === 'online' ? '#10b981' : '#ef4444';
             const iconHtml = `
@@ -454,19 +475,48 @@
             markers[slug] = marker;
         }
 
-        // Initialize on load
+        // Initialize on load with Fly-In Sequence
         document.addEventListener('DOMContentLoaded', () => {
-            // Match delay-1 (0.2s)
+            const scanner = document.getElementById('sentinel-scanner');
+            const placeholder = document.getElementById('master-map-placeholder');
+            
             setTimeout(() => {
+                if(scanner) scanner.classList.remove('hidden');
+                
                 initMasterMap();
                 const mapEl = document.getElementById('master-map');
-                if(mapEl) mapEl.style.opacity = '1';
                 
-                // Force size recalculation after animation finishes
+                // Hide scanner and placeholder once tiles start loading
+                if(map) {
+                    map.on('tileload', () => {
+                        if(mapEl) mapEl.style.opacity = '1';
+                        setTimeout(() => {
+                            if(scanner) scanner.classList.add('opacity-0');
+                            if(placeholder) placeholder.classList.add('opacity-0');
+                            setTimeout(() => {
+                                if(scanner) scanner.remove();
+                                if(placeholder) placeholder.remove();
+                            }, 1000);
+                        }, 500);
+                    });
+                }
+                
+                // --- CINEMATIC FLY-IN SEQUENCE ---
                 setTimeout(() => {
-                    if(map) map.invalidateSize();
-                }, 1000);
-            }, 200);
+                    if(map) {
+                        map.invalidateSize();
+                        map.flyTo([-6.3227, 107.3376], 12, {
+                            animate: true,
+                            duration: 4,
+                            easeLinearity: 0.25
+                        });
+                        
+                        setTimeout(() => {
+                            map.scrollWheelZoom.enable();
+                        }, 4000);
+                    }
+                }, 800);
+            }, 500);
         });
     </script>
 </body>
