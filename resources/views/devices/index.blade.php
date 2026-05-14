@@ -20,8 +20,12 @@
         0% { opacity: 0; transform: translateY(-100px); filter: blur(20px); }
         100% { opacity: 1; transform: translateY(0); filter: blur(0); }
     }
+    @keyframes revealScale {
+        0% { opacity: 0; transform: scale(0.9); filter: blur(20px); }
+        100% { opacity: 1; transform: scale(1); filter: blur(0); }
+    }
 
-    .v-reveal-left, .v-reveal-right, .v-reveal-bottom, .v-reveal-top {
+    .v-reveal-left, .v-reveal-right, .v-reveal-bottom, .v-reveal-top, .v-reveal-scale {
         opacity: 0;
         animation-duration: 1.8s;
         animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -33,6 +37,7 @@
     body.loaded .v-reveal-right { animation-name: revealFromRight; }
     body.loaded .v-reveal-bottom { animation-name: revealFromBottom; }
     body.loaded .v-reveal-top { animation-name: revealFromTop; }
+    body.loaded .v-reveal-scale { animation-name: revealScale; }
 
     /* Precise Staggered Delays - 0.3s Interval for Master Control */
     body.loaded .delay-1 { animation-delay: 0.2s !important; }
@@ -129,12 +134,12 @@
         
         <!-- Header Hero Section (Light) -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 mb-8 md:mb-12">
-            <div class="lg:col-span-8 v-reveal-left delay-1 text-center md:text-left">
+            <div class="lg:col-span-8 v-reveal-left delay-2 text-center md:text-left">
                 <h2 class="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter mb-4 leading-tight">Device Node <br class="md:hidden"><span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-700 font-black">Infrastructure</span></h2>
                 <p class="text-slate-500 text-sm md:text-lg max-w-2xl leading-relaxed font-medium">Kelola seluruh armada sensor telemetri Anda dengan presisi tingkat militer. Pantau status konektivitas, kalibrasi sensor, dan konfigurasi GPS secara terpusat.</p>
             </div>
             <div class="lg:col-span-4 grid grid-cols-2 gap-4">
-                <div class="v-reveal-bottom delay-2 bg-white border border-slate-200 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 flex flex-col justify-center shadow-sm">
+                <div class="v-reveal-bottom delay-3 bg-white border border-slate-200 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 flex flex-col justify-center shadow-sm">
                     <span class="text-[8px] md:text-[10px] font-black text-cyan-600 uppercase tracking-widest mb-1 md:mb-2">Total Nodes</span>
                     <div class="text-2xl md:text-4xl font-black text-slate-800 font-mono tracking-tighter">{{ count($devices) }}</div>
                 </div>
@@ -146,9 +151,9 @@
         </div>
         
         <!-- GIS ASSET LOCATOR (NEW) -->
-        <div class="v-reveal-bottom delay-4 mb-10">
+        <div class="v-reveal-right delay-1 mb-10">
             <div class="glass-panel p-2 rounded-[2.5rem] bg-white border border-white shadow-2xl overflow-hidden relative" style="height: 400px;">
-                <div id="master-map" class="w-full h-full rounded-[2.2rem] z-10"></div>
+                <div id="master-map" class="w-full h-full rounded-[2.2rem] z-10 opacity-0 transition-opacity duration-1000"></div>
                 
                 <!-- Map Legend -->
                 <div class="absolute bottom-6 left-6 z-[1000] bg-white/95 backdrop-blur-md border border-slate-200 p-4 rounded-2xl shadow-xl">
@@ -186,7 +191,7 @@
         <!-- Advanced Device Matrix (Light Mode) -->
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
             @foreach($devices as $index => $device)
-            <div class="v-reveal-bottom delay-{{ ($index % 5) + 4 }} group relative bg-white hover:bg-slate-50 border border-slate-200 hover:border-cyan-500/50 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 transition-all duration-500 shadow-md hover:shadow-2xl hover:shadow-cyan-500/10 overflow-hidden">
+            <div class="v-reveal-bottom delay-{{ ($index % 5) + 5 }} group relative bg-white hover:bg-slate-50 border border-slate-200 hover:border-cyan-500/50 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 transition-all duration-500 shadow-md hover:shadow-2xl hover:shadow-cyan-500/10 overflow-hidden">
                 
                 <!-- Status Badge -->
                 <div class="absolute top-6 md:top-8 right-6 md:right-8 flex items-center space-x-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
@@ -451,7 +456,17 @@
 
         // Initialize on load
         document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(initMasterMap, 800);
+            // Match delay-1 (0.2s)
+            setTimeout(() => {
+                initMasterMap();
+                const mapEl = document.getElementById('master-map');
+                if(mapEl) mapEl.style.opacity = '1';
+                
+                // Force size recalculation after animation finishes
+                setTimeout(() => {
+                    if(map) map.invalidateSize();
+                }, 1000);
+            }, 200);
         });
     </script>
 </body>
