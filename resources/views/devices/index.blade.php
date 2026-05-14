@@ -486,18 +486,33 @@
                 initMasterMap();
                 const mapEl = document.getElementById('master-map');
                 
-                // Hide scanner and placeholder once tiles start loading
-                if(map) {
-                    map.on('tileload', () => {
-                        if(mapEl) mapEl.style.opacity = '1';
+                // --- ROBUST LOAD HANDLING ---
+                const hideScanner = () => {
+                    if(mapEl) mapEl.style.opacity = '1';
+                    setTimeout(() => {
+                        if(scanner) scanner.classList.add('opacity-0');
+                        if(placeholder) placeholder.classList.add('opacity-0');
                         setTimeout(() => {
-                            if(scanner) scanner.classList.add('opacity-0');
-                            if(placeholder) placeholder.classList.add('opacity-0');
-                            setTimeout(() => {
-                                if(scanner) scanner.remove();
-                                if(placeholder) placeholder.remove();
-                            }, 1000);
-                        }, 500);
+                            if(scanner) scanner.remove();
+                            if(placeholder) placeholder.remove();
+                        }, 1000);
+                    }, 500);
+                };
+
+                // Fallback: Force hide scanner after 6 seconds if map tiles are slow
+                const fallbackTimeout = setTimeout(hideScanner, 6000);
+
+                if(map) {
+                    // Listen to the map itself for any tile activity
+                    map.on('tileload', () => {
+                        clearTimeout(fallbackTimeout);
+                        hideScanner();
+                    });
+                    
+                    // Also try 'load' event
+                    map.on('load', () => {
+                        clearTimeout(fallbackTimeout);
+                        hideScanner();
                     });
                 }
                 
