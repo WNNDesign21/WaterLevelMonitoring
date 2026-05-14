@@ -16,29 +16,23 @@
         0% { opacity: 0; transform: translateY(100px); filter: blur(20px); }
         100% { opacity: 1; transform: translateY(0); filter: blur(0); }
     }
-
-    .v-reveal-header { 
-        opacity: 0; 
-        transform: translateY(-70px);
-        filter: blur(15px);
-        transition: all 1.4s cubic-bezier(0.19, 1, 0.22, 1);
-    }
-    body.loaded .v-reveal-header { 
-        opacity: 1; 
-        transform: translateY(0);
-        filter: blur(0);
+    @keyframes revealFromTop {
+        0% { opacity: 0; transform: translateY(-100px); filter: blur(20px); }
+        100% { opacity: 1; transform: translateY(0); filter: blur(0); }
     }
 
-    .v-reveal-left, .v-reveal-right, .v-reveal-bottom {
+    .v-reveal-left, .v-reveal-right, .v-reveal-bottom, .v-reveal-top {
         opacity: 0;
-        animation-duration: 1.5s;
+        animation-duration: 1.8s;
         animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
         animation-fill-mode: forwards;
+        animation-delay: var(--delay, 0s);
     }
 
     body.loaded .v-reveal-left { animation-name: revealFromLeft; }
     body.loaded .v-reveal-right { animation-name: revealFromRight; }
     body.loaded .v-reveal-bottom { animation-name: revealFromBottom; }
+    body.loaded .v-reveal-top { animation-name: revealFromTop; }
 
     /* Precise Staggered Delays - 0.3s Interval for Master Control */
     body.loaded .delay-1 { animation-delay: 0.2s !important; }
@@ -62,8 +56,8 @@
     </div>
 
     <!-- HEADER: Consolidated WaterSense IT Command Center -->
-    <div class="max-w-[1800px] mx-auto px-4 md:px-6 pt-6 md:pt-10 v-reveal-header">
-        <div class="glass-panel p-4 md:p-5 rounded-[2rem] bg-white/60 border border-white shadow-xl flex flex-col lg:flex-row items-center justify-between gap-6">
+    <div class="max-w-[1800px] mx-auto px-4 md:px-6 pt-6 md:pt-10">
+        <div class="glass-panel p-4 md:p-5 rounded-[2rem] bg-white/60 border border-white shadow-xl flex flex-col lg:flex-row items-center justify-between gap-6 v-reveal-top" style="--delay: 0.2s">
             <!-- Branding Section (Left) -->
             <div class="flex items-center space-x-4">
                 <a href="{{ route('it.dashboard') }}" class="w-10 h-10 flex items-center justify-center bg-slate-900 text-white rounded-xl hover:bg-blue-600 transition-all shadow-lg shadow-slate-900/20 group">
@@ -330,15 +324,14 @@
     <script>
         // Trigger Animations with 'Human-Eye' Sync Delay
         function triggerReveal() {
-            setTimeout(() => {
-                if(!document.body.classList.contains('loaded')) {
-                    document.body.classList.add('loaded'); 
-                }
-            }, 300); // 300ms delay for desktop visibility
+            if(!document.body.classList.contains('loaded')) {
+                console.log('[SENTINEL-SYSTEM] Triggering Device HQ Reveal...');
+                document.body.classList.add('loaded'); 
+            }
         }
 
-        window.addEventListener('DOMContentLoaded', triggerReveal);
-        window.addEventListener('load', triggerReveal); // Backup
+        document.addEventListener('DOMContentLoaded', triggerReveal);
+        window.addEventListener('load', triggerReveal);
         setTimeout(triggerReveal, 3000); // EMERGENCY FAIL-SAFE (3 Seconds)
 
         function openDeviceModal(mode, device = null) {

@@ -14,32 +14,30 @@
         0% { opacity: 0; transform: translateY(100px); filter: blur(20px); }
         100% { opacity: 1; transform: translateY(0); filter: blur(0); }
     }
+    @keyframes revealFromTop {
+        0% { opacity: 0; transform: translateY(-100px); filter: blur(20px); }
+        100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+    }
 
-    .v-reveal-left, .v-reveal-right, .v-reveal-bottom {
+    .v-reveal-left, .v-reveal-right, .v-reveal-bottom, .v-reveal-top {
         opacity: 0;
-        animation-duration: 1.5s;
+        animation-duration: 1.8s;
         animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
         animation-fill-mode: forwards;
+        animation-delay: var(--delay, 0s);
     }
-
-    .v-reveal-header { 
-        opacity: 0; 
-        transform: translateY(-70px);
-        filter: blur(15px);
-        transition: all 1.4s cubic-bezier(0.19, 1, 0.22, 1);
-    }
-    body.loaded .v-reveal-header { 
-        opacity: 1; 
-        transform: translateY(0);
-        filter: blur(0);
-    }
-
-    .v-reveal-item { opacity: 0; }
-    body.loaded .v-reveal-item { animation: revealFadeUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
 
     body.loaded .v-reveal-left { animation-name: revealFromLeft; }
     body.loaded .v-reveal-right { animation-name: revealFromRight; }
     body.loaded .v-reveal-bottom { animation-name: revealFromBottom; }
+    body.loaded .v-reveal-top { animation-name: revealFromTop; }
+
+    .v-reveal-item { opacity: 0; }
+    @keyframes revealFadeUp {
+        0% { opacity: 0; transform: translateY(30px); filter: blur(10px); }
+        100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+    }
+    body.loaded .v-reveal-item { animation: revealFadeUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
 
     body.loaded .delay-1 { animation-delay: 0.2s !important; }
     body.loaded .delay-2 { animation-delay: 0.6s !important; }
@@ -63,8 +61,8 @@
     <div class="w-full max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-8 mt-6 relative z-10">
         
         <!-- HEADER: Consolidated WaterSense IT Command Center -->
-        <div class="mb-8 v-reveal-header">
-            <div class="glass-panel p-4 md:p-6 rounded-[2rem] bg-white/60 border border-white shadow-xl flex flex-col lg:flex-row items-center justify-between gap-6">
+        <div class="mb-8">
+            <div class="glass-panel p-4 md:p-6 rounded-[2rem] bg-white/60 border border-white shadow-xl flex flex-col lg:flex-row items-center justify-between gap-6 v-reveal-top" style="--delay: 0.2s">
                 <!-- Branding Section (Left) -->
                 <div class="flex items-center space-x-4">
                     <div class="w-12 h-12 flex items-center justify-center shrink-0">
@@ -681,15 +679,14 @@
 
         // Trigger Animations with 'Human-Eye' Sync Delay
         function triggerReveal() {
-            setTimeout(() => {
-                if(!document.body.classList.contains('loaded')) {
-                    document.body.classList.add('loaded'); 
-                }
-            }, 300); // 300ms delay to ensure visibility on fast desktop devices
+            if(!document.body.classList.contains('loaded')) {
+                console.log('[SENTINEL-SYSTEM] Triggering IT Dashboard Reveal...');
+                document.body.classList.add('loaded'); 
+            }
         }
-
-        window.addEventListener('DOMContentLoaded', triggerReveal);
-        window.addEventListener('load', triggerReveal); // Backup
+        
+        document.addEventListener('DOMContentLoaded', triggerReveal);
+        window.addEventListener('load', triggerReveal);
         setTimeout(triggerReveal, 3000); // EMERGENCY FAIL-SAFE (3 Seconds)
 
         // Device Selector Logic (IT)
