@@ -22,3 +22,6 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Local Simulation Tool (Local Only)
+/app/Console/Commands/SensorSimulate.php
