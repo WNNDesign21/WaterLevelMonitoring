@@ -339,7 +339,7 @@
         }
 
         window.updateWeather = async function(lat, lng) {
-            const WEATHER_KEY = "{{ env('OPENWEATHER_API_KEY') }}";
+            const WEATHER_KEY = "{{ config('services.openweather.key') }}";
             
             // 1. Resolve Location (Non-blocking but aware)
             const locationPromise = resolveLocation(lat, lng);
