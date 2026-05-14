@@ -1,33 +1,33 @@
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import '../../home/controllers/home_controller.dart';
 
 class SettingsController extends GetxController {
   final _storage = GetStorage();
-  final ipController = TextEditingController();
+  final homeController = Get.find<HomeController>();
 
-  @override
-  void onInit() {
-    super.onInit();
-    ipController.text = _storage.read('server_ip') ?? '127.0.0.1';
+  // Version Info
+  final String appVersion = '2.1.0';
+  final String appBuild = 'Stable Build 102';
+  final String developerName = 'Cybernova Telemetry';
+  final String developerWeb = 'www.cybernova.id';
+
+  // State
+  var isSyncing = false.obs;
+
+  void setDefaultDevice(Map<String, dynamic> device) {
+    final slug = device['slug'] ?? '';
+    _storage.write('default_device_slug', slug);
+    // Optionally trigger a refresh or notification
+    Get.snackbar(
+      'Default Node Diperbarui',
+      '${device['name']} telah disetel sebagai node utama.',
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 2),
+    );
   }
 
-  void saveSettings() {
-    if (ipController.text.isNotEmpty) {
-      _storage.write('server_ip', ipController.text);
-      Get.snackbar(
-        'Berhasil',
-        'IP Server diperbarui ke ${ipController.text}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
-    }
-  }
-
-  @override
-  void onClose() {
-    ipController.dispose();
-    super.onClose();
+  String getDefaultDeviceSlug() {
+    return _storage.read('default_device_slug') ?? '';
   }
 }

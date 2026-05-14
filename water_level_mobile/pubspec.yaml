@@ -2,7 +2,7 @@ name: water_level_mobile
 description: A new Flutter application for monitoring water levels.
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 2.0.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -17,6 +17,19 @@ dependencies:
   vibration: ^2.0.1
   flutter_ringtone_player: ^4.0.0+4
   audioplayers: ^6.1.0
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+  flutter_local_notifications: ^18.0.1
+  permission_handler: ^11.3.1
+  url_launcher: ^6.3.1
+  geolocator: 13.0.1
+  geocoding: ^3.0.0
+  intl: ^0.19.0
+  fl_chart: ^1.2.0
+  flutter_dotenv: ^6.0.1
+  connectivity_plus: ^7.1.1
+  shimmer: 3.0.0
+  syncfusion_flutter_datepicker: ^25.1.37
 
 dev_dependencies:
   flutter_test:
@@ -25,3 +38,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/
+    - .env

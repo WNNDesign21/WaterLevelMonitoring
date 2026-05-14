@@ -1,25 +1,49 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
-import 'package:get_storage/get_storage.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiProvider {
-  final _storage = GetStorage();
-  
   String get baseUrl {
-    final ip = _storage.read('server_ip') ?? '127.0.0.1';
-    return 'http://$ip:8000/api';
+    return dotenv.env['API_BASE_URL'] ?? 'http://192.168.121.197:8000/api';
   }
 
-  Future<Map<String, dynamic>?> fetchLatestSensorData() async {
+  /// Fetch latest sensor data for a specific device slug.
+  Future<Map<String, dynamic>?> fetchLatestSensorData(
+      {String slug = 'cybernova-s400-primary'}) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/sensor-data/latest'));
+      final uri = Uri.parse('$baseUrl/sensor-data/latest/$slug');
+      final response = await http.get(uri).timeout(const Duration(seconds: 8));
       if (response.statusCode == 200) {
         return json.decode(response.body);
       }
-    } catch (e) {
-      print('Error fetching data: $e');
-    }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Fetch all registered devices for the dropdown selector.
+  Future<List<Map<String, dynamic>>> fetchDevices() async {
+    try {
+      final uri = Uri.parse('$baseUrl/devices');
+      final response = await http.get(uri).timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200) {
+        final body = json.decode(response.body);
+        if (body['status'] == 'success') {
+          return List<Map<String, dynamic>>.from(body['data']);
+        }
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  /// Fetch stats for a device (avg, min, max)
+  Future<Map<String, dynamic>?> fetchSensorStats(String slug) async {
+    try {
+      final uri = Uri.parse('$baseUrl/sensor-data/stats/$slug');
+      final response = await http.get(uri).timeout(const Duration(seconds: 8));
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+    } catch (_) {}
     return null;
   }
 }

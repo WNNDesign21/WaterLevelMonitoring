@@ -1,4 +1,6 @@
 @include('partials.dashboard.head')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
 <style>
     /* DIRECT CACHE BYPASS CSS - MASTER ASSEMBLY SYSTEM */
@@ -14,17 +16,23 @@
         0% { opacity: 0; transform: translateY(100px); filter: blur(20px); }
         100% { opacity: 1; transform: translateY(0); filter: blur(0); }
     }
+    @keyframes revealFromTop {
+        0% { opacity: 0; transform: translateY(-100px); filter: blur(20px); }
+        100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+    }
 
-    .v-reveal-left, .v-reveal-right, .v-reveal-bottom {
+    .v-reveal-left, .v-reveal-right, .v-reveal-bottom, .v-reveal-top {
         opacity: 0;
-        animation-duration: 1.5s;
+        animation-duration: 1.8s;
         animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
         animation-fill-mode: forwards;
+        animation-delay: var(--delay, 0s);
     }
 
     body.loaded .v-reveal-left { animation-name: revealFromLeft; }
     body.loaded .v-reveal-right { animation-name: revealFromRight; }
     body.loaded .v-reveal-bottom { animation-name: revealFromBottom; }
+    body.loaded .v-reveal-top { animation-name: revealFromTop; }
 
     /* Precise Staggered Delays - 0.3s Interval for Master Control */
     body.loaded .delay-1 { animation-delay: 0.2s !important; }
@@ -47,46 +55,122 @@
         <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-cyan-400/5 rounded-full blur-[120px]"></div>
     </div>
 
-    <!-- Navigation Bar (Light) -->
-    <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200 shadow-sm">
-        <div class="max-w-[1800px] mx-auto px-6 h-20 flex items-center justify-between">
+    <!-- HEADER: Consolidated WaterSense IT Command Center -->
+    <div class="max-w-[1800px] mx-auto px-4 md:px-6 pt-6 md:pt-10">
+        <div class="glass-panel p-4 md:p-5 rounded-[2rem] bg-white/60 border border-white shadow-xl flex flex-col lg:flex-row items-center justify-between gap-6 v-reveal-top" style="--delay: 0.2s">
+            <!-- Branding Section (Left) -->
             <div class="flex items-center space-x-4">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-                    <i class="fa-solid fa-microchip text-white text-lg"></i>
+                <a href="{{ route('it.dashboard') }}" class="w-10 h-10 flex items-center justify-center bg-slate-900 text-white rounded-xl hover:bg-blue-600 transition-all shadow-lg shadow-slate-900/20 group">
+                    <i class="fa-solid fa-arrow-left text-xs transition-transform group-hover:-translate-x-1"></i>
+                </a>
+                <div class="flex items-center space-x-3 border-r border-slate-200 pr-6 mr-2 hidden md:flex">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                        <i class="fa-solid fa-microchip text-white text-base"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-black text-slate-800 tracking-tighter uppercase leading-none">Device<span class="text-cyan-600">Manager</span></h1>
+                        <p class="text-[8px] font-mono text-cyan-600 tracking-[0.3em] uppercase mt-1">INFRASTRUCTURE_CTRL</p>
+                    </div>
                 </div>
-                <div>
-                    <h1 class="text-lg font-black tracking-widest uppercase text-slate-800">Device Command Center</h1>
-                    <p class="text-[9px] font-mono text-cyan-600 tracking-[0.3em] uppercase font-bold">Hardware Management Protocol v4.0</p>
+                <!-- Real-time Clock -->
+                <div class="hidden xl:flex flex-col">
+                    <span id="header-time" class="text-xs font-black text-slate-700 font-mono tracking-widest">00:00:00</span>
+                    <span class="text-[8px] font-bold text-slate-400 uppercase tracking-tighter mt-1">WIB_KARAWANG_SECTOR</span>
                 </div>
             </div>
-            
-            <div class="flex items-center space-x-4">
-                <a href="{{ route('it.dashboard') }}" class="px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 transition-all flex items-center group">
-                    <i class="fa-solid fa-arrow-left mr-2 group-hover:-translate-x-1 transition-transform"></i> Kembali ke NOC
-                </a>
-                <button onclick="openDeviceModal('add')" class="px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-gradient-to-r from-slate-800 to-slate-900 text-white shadow-xl shadow-slate-200 hover:scale-105 active:scale-95 transition-all flex items-center">
-                    <i class="fa-solid fa-plus mr-2"></i> Register New Node
+
+            <!-- Central Status & Actions -->
+            <div class="flex flex-wrap items-center justify-center gap-4">
+                <button onclick="openDeviceModal('add')" class="flex items-center space-x-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-cyan-600 transition-all shadow-lg shadow-slate-900/20">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    <span>Register Node</span>
                 </button>
+
+                <div class="flex items-center bg-slate-100/50 p-1 rounded-2xl border border-slate-200/30">
+                    <a href="{{ route('it.dashboard') }}" class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-900 hover:text-white transition-all">Dashboard</a>
+                    <div class="w-px h-4 bg-slate-200 mx-1"></div>
+                    <a href="{{ route('it.analytics.index') }}" class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-blue-600 hover:text-white transition-all">Analytics</a>
+                    <div class="w-px h-4 bg-slate-200 mx-1"></div>
+                    <a href="{{ route('it.users.index') }}" class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-cyan-500 hover:text-white transition-all">Users</a>
+                </div>
+            </div>
+
+            <!-- Profile Section (Right) -->
+            <div class="flex items-center space-x-4">
+                <div class="text-right hidden sm:block">
+                    <div class="text-[11px] font-black text-slate-800 uppercase tracking-tighter leading-none">{{ auth()->user()->name }}</div>
+                    <div class="text-[8px] font-bold text-cyan-600 uppercase tracking-widest mt-1.5 flex items-center justify-end">IT_ADMIN_RANK</div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <img src="{{ auth()->user()->avatar ?? 'https://ui-avatars.com/api/?name='.urlencode(auth()->user()->name).'&background=0f172a&color=fff' }}" class="w-10 h-10 rounded-xl object-cover border-2 border-white shadow-lg">
+                    <form action="{{ route('logout') }}" method="POST" class="inline">
+                        @csrf
+                        <button type="submit" class="w-10 h-10 rounded-xl bg-red-500 text-white hover:bg-red-600 transition-all shadow-lg flex items-center justify-center group">
+                            <i class="fa-solid fa-power-off text-xs group-hover:scale-110 transition-transform"></i>
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
-    </nav>
+    </div>
 
-    <main class="relative z-10 max-w-[1800px] mx-auto px-6 py-10">
+    <script>
+        function updateHeaderClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const element = document.getElementById('header-time');
+            if(element) element.textContent = timeStr.replace(/\./g, ':');
+        }
+        setInterval(updateHeaderClock, 1000);
+        updateHeaderClock();
+    </script>
+
+    <main class="relative z-10 max-w-[1800px] mx-auto px-4 md:px-6 py-6 md:py-10">
         
         <!-- Header Hero Section (Light) -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
-            <div class="lg:col-span-8 v-reveal-left delay-1">
-                <h2 class="text-5xl font-black text-slate-900 tracking-tighter mb-4">Master Node <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-700 font-black">Infrastructure</span></h2>
-                <p class="text-slate-500 text-lg max-w-2xl leading-relaxed font-medium">Kelola seluruh armada sensor telemetri Anda dengan presisi tingkat militer. Pantau status konektivitas, kalibrasi sensor, dan konfigurasi GPS secara terpusat.</p>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 mb-8 md:mb-12">
+            <div class="lg:col-span-8 v-reveal-left delay-1 text-center md:text-left">
+                <h2 class="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter mb-4 leading-tight">Device Node <br class="md:hidden"><span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-700 font-black">Infrastructure</span></h2>
+                <p class="text-slate-500 text-sm md:text-lg max-w-2xl leading-relaxed font-medium">Kelola seluruh armada sensor telemetri Anda dengan presisi tingkat militer. Pantau status konektivitas, kalibrasi sensor, dan konfigurasi GPS secara terpusat.</p>
             </div>
             <div class="lg:col-span-4 grid grid-cols-2 gap-4">
-                <div class="v-reveal-bottom delay-2 bg-white border border-slate-200 rounded-[2rem] p-6 flex flex-col justify-center shadow-sm">
-                    <span class="text-[10px] font-black text-cyan-600 uppercase tracking-widest mb-2">Total Nodes</span>
-                    <div class="text-4xl font-black text-slate-800 font-mono tracking-tighter">{{ count($devices) }}</div>
+                <div class="v-reveal-bottom delay-2 bg-white border border-slate-200 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 flex flex-col justify-center shadow-sm">
+                    <span class="text-[8px] md:text-[10px] font-black text-cyan-600 uppercase tracking-widest mb-1 md:mb-2">Total Nodes</span>
+                    <div class="text-2xl md:text-4xl font-black text-slate-800 font-mono tracking-tighter">{{ count($devices) }}</div>
                 </div>
-                <div class="v-reveal-bottom delay-3 bg-white border border-slate-200 rounded-[2rem] p-6 flex flex-col justify-center shadow-sm">
-                    <span class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2">Active Signal</span>
-                    <div class="text-4xl font-black text-slate-800 font-mono tracking-tighter">{{ $devices->where('status', 'online')->count() }}</div>
+                <div class="v-reveal-bottom delay-3 bg-white border border-slate-200 rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 flex flex-col justify-center shadow-sm">
+                    <span class="text-[8px] md:text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1 md:mb-2">Active Signal</span>
+                    <div class="text-2xl md:text-4xl font-black text-slate-800 font-mono tracking-tighter">{{ $devices->where('status', 'online')->count() }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- GIS ASSET LOCATOR (NEW) -->
+        <div class="v-reveal-bottom delay-4 mb-10">
+            <div class="glass-panel p-2 rounded-[2.5rem] bg-white border border-white shadow-2xl overflow-hidden relative" style="height: 400px;">
+                <div id="master-map" class="w-full h-full rounded-[2.2rem] z-10"></div>
+                
+                <!-- Map Legend -->
+                <div class="absolute bottom-6 left-6 z-[1000] bg-white/95 backdrop-blur-md border border-slate-200 p-4 rounded-2xl shadow-xl">
+                    <h4 class="text-[9px] font-black text-slate-800 uppercase tracking-widest border-b border-slate-100 pb-2 mb-3">Asset Status</h4>
+                    <div class="space-y-2">
+                        <div class="flex items-center space-x-3">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span class="text-[9px] font-bold text-slate-600 uppercase">Operational</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                            <span class="text-[9px] font-bold text-slate-600 uppercase">Faulty / Offline</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Floating Title -->
+                <div class="absolute top-6 right-6 z-[1000] pointer-events-none">
+                    <div class="bg-slate-900/90 backdrop-blur-md px-5 py-2.5 rounded-xl border border-slate-700 shadow-2xl text-right">
+                        <h3 class="text-[10px] font-black text-white uppercase tracking-[0.3em]">Geospatial_Asset_Intelligence</h3>
+                        <p class="text-[8px] font-bold text-cyan-400 uppercase tracking-widest mt-1">SENTINEL_LOCATOR_SYSTEM</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -100,55 +184,55 @@
         @endif
 
         <!-- Advanced Device Matrix (Light Mode) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
             @foreach($devices as $index => $device)
-            <div class="v-reveal-bottom delay-{{ ($index % 5) + 4 }} group relative bg-white hover:bg-slate-50 border border-slate-200 hover:border-cyan-500/50 rounded-[2.5rem] p-8 transition-all duration-500 shadow-md hover:shadow-2xl hover:shadow-cyan-500/10 overflow-hidden">
+            <div class="v-reveal-bottom delay-{{ ($index % 5) + 4 }} group relative bg-white hover:bg-slate-50 border border-slate-200 hover:border-cyan-500/50 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 transition-all duration-500 shadow-md hover:shadow-2xl hover:shadow-cyan-500/10 overflow-hidden">
                 
                 <!-- Status Badge -->
-                <div class="absolute top-8 right-8 flex items-center space-x-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
+                <div class="absolute top-6 md:top-8 right-6 md:right-8 flex items-center space-x-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
                     <span class="w-2 h-2 rounded-full {{ $device->status === 'online' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : ($device->status === 'maintenance' ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : 'bg-slate-300') }} animate-pulse"></span>
-                    <span class="text-[9px] font-black uppercase tracking-widest text-slate-600">{{ $device->status }}</span>
+                    <span class="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-slate-600">{{ $device->status }}</span>
                 </div>
 
-                <div class="flex items-start justify-between mb-8">
-                    <div class="w-16 h-16 rounded-[1.5rem] bg-gradient-to-br {{ $device->status === 'online' ? 'from-cyan-500 to-blue-600 shadow-cyan-500/20' : 'from-slate-400 to-slate-500 shadow-slate-300/20' }} flex items-center justify-center shadow-xl">
-                        <i class="fa-solid {{ $device->type === 'Ultrasonic Sensor' ? 'fa-wave-square' : 'fa-microchip' }} text-white text-2xl"></i>
+                <div class="flex items-start justify-between mb-6 md:mb-8">
+                    <div class="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-[1.5rem] bg-gradient-to-br {{ $device->status === 'online' ? 'from-cyan-500 to-blue-600 shadow-cyan-500/20' : 'from-slate-400 to-slate-500 shadow-slate-300/20' }} flex items-center justify-center shadow-xl">
+                        <i class="fa-solid {{ $device->type === 'Ultrasonic Sensor' ? 'fa-wave-square' : 'fa-microchip' }} text-white text-xl md:text-2xl"></i>
                     </div>
                 </div>
 
                 <div class="space-y-1 mb-6">
-                    <h3 class="text-2xl font-black text-slate-800 group-hover:text-cyan-600 transition-colors tracking-tight">{{ $device->name }}</h3>
-                    <div class="flex items-center space-x-2 text-xs font-mono text-slate-400">
+                    <h3 class="text-xl md:text-2xl font-black text-slate-800 group-hover:text-cyan-600 transition-colors tracking-tight">{{ $device->name }}</h3>
+                    <div class="flex items-center space-x-2 text-[10px] md:text-xs font-mono text-slate-400">
                         <i class="fa-solid fa-barcode text-[10px]"></i>
                         <span>SN: {{ $device->serial_number }}</span>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4 mb-8">
-                    <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                        <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Last Latitude</span>
-                        <span class="text-xs font-mono text-slate-700 font-bold">{{ $device->latitude ?? 'N/A' }}</span>
+                <div class="grid grid-cols-2 gap-3 md:gap-4 mb-6 md:mb-8">
+                    <div class="bg-slate-50 rounded-xl md:rounded-2xl p-3 md:p-4 border border-slate-100">
+                        <span class="text-[7px] md:text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Latitude</span>
+                        <span class="text-[10px] md:text-xs font-mono text-slate-700 font-bold truncate block">{{ $device->latitude ?? 'N/A' }}</span>
                     </div>
-                    <div class="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                        <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Last Longitude</span>
-                        <span class="text-xs font-mono text-slate-700 font-bold">{{ $device->longitude ?? 'N/A' }}</span>
+                    <div class="bg-slate-50 rounded-xl md:rounded-2xl p-3 md:p-4 border border-slate-100">
+                        <span class="text-[7px] md:text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Longitude</span>
+                        <span class="text-[10px] md:text-xs font-mono text-slate-700 font-bold truncate block">{{ $device->longitude ?? 'N/A' }}</span>
                     </div>
                 </div>
 
-                <div class="flex items-center justify-between pt-6 border-t border-slate-100 space-x-3">
+                <div class="flex flex-wrap items-center justify-between pt-4 md:pt-6 border-t border-slate-100 gap-3">
                     <div class="flex space-x-2">
-                        <button onclick="openCalibrationModal({{ json_encode($device) }})" class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-cyan-500 text-slate-400 hover:text-white transition-all flex items-center justify-center border border-slate-200 shadow-sm" title="Calibrate">
-                            <i class="fa-solid fa-sliders text-sm"></i>
+                        <button onclick="openCalibrationModal({{ json_encode($device) }})" class="w-9 h-9 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-slate-50 hover:bg-cyan-500 text-slate-400 hover:text-white transition-all flex items-center justify-center border border-slate-200 shadow-sm" title="Calibrate">
+                            <i class="fa-solid fa-sliders text-xs md:text-sm"></i>
                         </button>
-                        <button onclick="openDeviceModal('edit', {{ json_encode($device) }})" class="w-10 h-10 rounded-xl bg-slate-50 hover:bg-blue-600 text-slate-400 hover:text-white transition-all flex items-center justify-center border border-slate-200 shadow-sm" title="Edit">
-                            <i class="fa-solid fa-pen-to-square text-sm"></i>
+                        <button onclick="openDeviceModal('edit', {{ json_encode($device) }})" class="w-9 h-9 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-slate-50 hover:bg-blue-600 text-slate-400 hover:text-white transition-all flex items-center justify-center border border-slate-200 shadow-sm" title="Edit">
+                            <i class="fa-solid fa-pen-to-square text-xs md:text-sm"></i>
                         </button>
                     </div>
                     
-                    <form action="{{ route('devices.destroy', $device->id) }}" method="POST" onsubmit="return confirm('DESTROY NODE: Apakah Anda yakin? Tindakan ini tidak dapat dibatalkan.');">
+                    <form action="{{ route('it.devices.destroy', $device->id) }}" method="POST" onsubmit="return confirm('DESTROY NODE: Apakah Anda yakin? Tindakan ini tidak dapat dibatalkan.');" class="flex-1 md:flex-none">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="h-10 px-4 rounded-xl bg-red-50 hover:bg-red-500 text-red-500 hover:text-white transition-all border border-red-100 text-[10px] font-black uppercase tracking-widest flex items-center shadow-sm">
+                        <button type="submit" class="h-9 md:h-10 w-full md:w-auto px-4 rounded-lg md:rounded-xl bg-red-50 hover:bg-red-500 text-red-500 hover:text-white transition-all border border-red-100 text-[8px] md:text-[10px] font-black uppercase tracking-widest flex items-center justify-center shadow-sm">
                             <i class="fa-solid fa-trash-can mr-2"></i> Terminate
                         </button>
                     </form>
@@ -185,7 +269,7 @@
                 </div>
                 <button onclick="closeDeviceModal()" class="w-10 h-10 rounded-full bg-white hover:bg-red-500 text-slate-400 hover:text-white transition-all flex items-center justify-center shadow-sm border border-slate-100"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <form id="deviceForm" method="POST" action="{{ route('devices.store') }}">
+            <form id="deviceForm" method="POST" action="{{ route('it.devices.store') }}">
                 @csrf
                 <input type="hidden" name="_method" id="formMethod" value="POST">
                 
@@ -238,15 +322,16 @@
     @include('partials.dashboard.scripts')
 
     <script>
-        // Trigger Animations Faster (DOMContentLoaded)
+        // Trigger Animations with 'Human-Eye' Sync Delay
         function triggerReveal() {
             if(!document.body.classList.contains('loaded')) {
+                console.log('[SENTINEL-SYSTEM] Triggering Device HQ Reveal...');
                 document.body.classList.add('loaded'); 
             }
         }
 
-        window.addEventListener('DOMContentLoaded', triggerReveal);
-        window.addEventListener('load', triggerReveal); // Backup
+        document.addEventListener('DOMContentLoaded', triggerReveal);
+        window.addEventListener('load', triggerReveal);
         setTimeout(triggerReveal, 3000); // EMERGENCY FAIL-SAFE (3 Seconds)
 
         function openDeviceModal(mode, device = null) {
@@ -265,7 +350,7 @@
 
             if (mode === 'add') {
                 title.innerText = 'Register New Node';
-                form.action = "{{ route('devices.store') }}";
+                form.action = "{{ route('it.devices.store') }}";
                 method.value = 'POST';
                 form.reset();
                 statusGroup.classList.add('hidden');
@@ -294,6 +379,80 @@
             content.classList.add('scale-95', 'opacity-0');
             setTimeout(() => { modal.classList.add('hidden'); }, 300);
         }
+
+        // --- GIS MAP LOGIC (LEAFLET) ---
+        let map = null;
+        let markers = {};
+
+        function initMasterMap() {
+            map = L.map('master-map', {
+                zoomControl: false,
+                attributionControl: false
+            }).setView([-6.3227, 107.3376], 12);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19
+            }).addTo(map);
+
+            L.control.zoom({ position: 'topright' }).addTo(map);
+            
+            // Add initial markers
+            @foreach($devices as $device)
+                @if($device->latitude && $device->longitude)
+                    addMapMarker(
+                        {{ $device->latitude }}, 
+                        {{ $device->longitude }}, 
+                        '{{ addslashes($device->name) }}', 
+                        '{{ $device->status }}',
+                        '{{ $device->slug }}'
+                    );
+                @endif
+            @endforeach
+        }
+
+        function addMapMarker(lat, lng, name, status, slug) {
+            const color = status === 'online' ? '#10b981' : '#ef4444';
+            const iconHtml = `
+                <div class="relative group">
+                    <div class="w-5 h-5 rounded-full" style="background-color: ${color}; border: 3px solid white; box-shadow: 0 0 15px rgba(0,0,0,0.3);"></div>
+                    ${status === 'online' ? `<div class="absolute inset-0 w-5 h-5 rounded-full animate-ping" style="background-color: ${color}; opacity: 0.4;"></div>` : ''}
+                </div>
+            `;
+
+            const customIcon = L.divIcon({
+                html: iconHtml,
+                className: 'custom-div-icon',
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+
+            const marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
+            
+            const popupContent = `
+                <div class="p-3 min-w-[160px]">
+                    <div class="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Asset_Node</div>
+                    <h4 class="text-[11px] font-black text-slate-800 uppercase mb-2 border-b border-slate-100 pb-1">${name}</h4>
+                    <div class="flex items-center space-x-2 mb-3">
+                        <span class="w-2 h-2 rounded-full ${status === 'online' ? 'bg-emerald-500' : 'bg-red-500'}"></span>
+                        <span class="text-[9px] font-black uppercase text-slate-500 tracking-tighter">${status.toUpperCase()}</span>
+                    </div>
+                    <div class="text-[7px] font-mono text-slate-400 bg-slate-50 p-1.5 rounded border border-slate-100">
+                        LAT: ${lat.toFixed(4)}<br>LNG: ${lng.toFixed(4)}
+                    </div>
+                </div>
+            `;
+            marker.bindPopup(popupContent, {
+                className: 'custom-leaflet-popup',
+                closeButton: false
+            });
+            
+            markers[slug] = marker;
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(initMasterMap, 800);
+        });
     </script>
 </body>
 </html>

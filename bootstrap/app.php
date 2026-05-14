@@ -13,7 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'it.admin' => \App\Http\Middleware\CheckITRole::class,
+            'password.change.enforce' => \App\Http\Middleware\ForcePasswordChange::class,
+            'system.lockdown' => \App\Http\Middleware\CheckSystemLockdown::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

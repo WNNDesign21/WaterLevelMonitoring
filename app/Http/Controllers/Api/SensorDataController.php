@@ -9,7 +9,7 @@ use App\Events\SensorDataReceived;
 
 class SensorDataController extends Controller
 {
-    public function store(Request $request)
+    public function store(Request $request, \App\Services\NotificationService $notificationService)
     {
         $request->validate([
             'device_slug' => 'required|string|exists:devices,slug', // Hardware wajib kirim slugnya
@@ -30,6 +30,10 @@ class SensorDataController extends Controller
             'status' => 'online',
             'last_seen' => now()
         ]);
+
+        // Process Smart Notifications
+        $tma = $device->calculateTma($data->distance);
+        $notificationService->checkAndNotify($device, $tma);
 
         // Broadcast dengan data device
         broadcast(new SensorDataReceived($data, $device));

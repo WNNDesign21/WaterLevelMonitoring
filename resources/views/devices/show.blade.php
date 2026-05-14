@@ -7,7 +7,7 @@
         <nav class="flex mb-8 space-x-2 text-xs font-bold uppercase tracking-widest text-slate-400">
             <a href="{{ route('dashboard') }}" class="hover:text-blue-600 transition-colors">DASBOR</a>
             <span>/</span>
-            <a href="{{ route('devices.index') }}" class="hover:text-blue-600 transition-colors">PERANGKAT</a>
+            <a href="{{ route('it.devices.index') }}" class="hover:text-blue-600 transition-colors">PERANGKAT</a>
             <span>/</span>
             <span class="text-slate-600">{{ $device->name }}</span>
         </nav>
