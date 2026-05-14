@@ -56,19 +56,24 @@
                 <p class="text-sm font-bold text-slate-500 leading-relaxed">Sistem informasi hidrologi cerdas untuk keselamatan warga. Pilih cara Anda untuk mulai memantau.</p>
                 
                 <div class="mt-12 space-y-4">
-                    <!-- Option 1: Safety First -->
-                    <a href="{{ route('login') }}" class="flex items-center justify-between w-full p-5 rounded-3xl bg-slate-900 text-white hover:bg-blue-600 transition-all duration-300 group shadow-xl shadow-slate-900/20">
-                        <div class="flex items-center text-left">
-                            <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
-                                <i class="fa-solid fa-shield-check text-xl"></i>
+                    <!-- Option 1: MASUK (Login) -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <a href="{{ route('login') }}" class="flex flex-col items-center justify-center p-6 rounded-[2rem] bg-slate-900 text-white hover:bg-blue-600 transition-all duration-300 group shadow-xl shadow-slate-900/10">
+                            <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-right-to-bracket text-xl"></i>
                             </div>
-                            <div>
-                                <p class="text-[10px] font-black uppercase tracking-widest opacity-60">Direkomendasikan</p>
-                                <p class="text-sm font-black uppercase tracking-widest">Masuk / Daftar Akun</p>
+                            <p class="text-[9px] font-black uppercase tracking-widest opacity-60 mb-1">Sudah Punya Akun</p>
+                            <p class="text-xs font-black uppercase tracking-widest">Masuk</p>
+                        </a>
+
+                        <a href="{{ route('register') }}" class="flex flex-col items-center justify-center p-6 rounded-[2rem] bg-white border-2 border-slate-100 text-slate-800 hover:border-blue-500/30 hover:bg-blue-50/30 transition-all duration-300 group shadow-xl shadow-slate-200/20">
+                            <div class="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center mb-3 group-hover:bg-blue-500 group-hover:text-white transition-all">
+                                <i class="fa-solid fa-user-plus text-xl"></i>
                             </div>
-                        </div>
-                        <i class="fa-solid fa-chevron-right mr-2 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1"></i>
-                    </a>
+                            <p class="text-[9px] font-black uppercase tracking-widest opacity-60 mb-1">Pengguna Baru</p>
+                            <p class="text-xs font-black uppercase tracking-widest">Daftar</p>
+                        </a>
+                    </div>
 
                     <!-- Option 2: Quick Monitor -->
                     <button onclick="closePortal()" class="flex items-center justify-between w-full p-5 rounded-3xl bg-white border-2 border-slate-100 text-slate-600 hover:border-blue-500/30 hover:bg-blue-50/30 transition-all duration-300 group">
