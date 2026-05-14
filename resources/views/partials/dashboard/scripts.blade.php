@@ -27,15 +27,25 @@
         // trendData24h will start empty until real data arrives
         
         // --- DOM Selectors (Multi-instance safe helpers) ---
-        const updateText = (selector, text) => document.querySelectorAll(selector).forEach(el => el.textContent = text);
-        const updateHtml = (selector, html) => document.querySelectorAll(selector).forEach(el => el.innerHTML = html);
+        const updateText = (selector, text) => {
+            document.querySelectorAll(selector).forEach(el => {
+                el.textContent = text;
+                el.classList.remove('skeleton', 'w-24', 'h-10', 'w-32', 'h-3', 'w-16', 'h-8', 'h-14');
+            });
+        };
+        const updateHtml = (selector, html) => {
+            document.querySelectorAll(selector).forEach(el => {
+                el.innerHTML = html;
+                el.classList.remove('skeleton', 'w-24', 'h-10', 'w-32', 'h-3', 'w-16', 'h-8', 'h-14');
+            });
+        };
 
         // --- Echo / WebSocket Initialization ---
-        let echoInstance = null;
-        let currentDeviceSlug = '{{ $primaryDevice->slug ?? "cybernova-s400-primary" }}';
+        window.echoInstance = null;
+        window.currentDeviceSlug = '{{ $primaryDevice->slug ?? "cybernova-s400-primary" }}';
         
         if(typeof Echo !== 'undefined') {
-            echoInstance = new Echo({
+            window.echoInstance = new Echo({
                 broadcaster: 'reverb',
                 key: '{{ env('REVERB_APP_KEY') }}',
                 wsHost: window.location.hostname || '127.0.0.1',
@@ -66,7 +76,7 @@
             });
 
             // Listen for Sensor Data
-            echoInstance.channel('sensor-data.' + currentDeviceSlug)
+            window.echoInstance.channel('sensor-data.' + window.currentDeviceSlug)
                 .listen('.sensor.updated', (e) => {
                     if(e.sensorData) {
                         updateDashboard({ data: e.sensorData, config: e.config });
@@ -74,22 +84,41 @@
                 });
                 
             // Expose switchDevice globally
-            window.switchDevice = function(slug, name) {
-                if(currentDeviceSlug === slug) return;
+            window.switchDevice = function(slug, name, lat, lng) {
+                console.log(`[SENTINEL-SYSTEM] Initiating Global Switch to: ${slug} (${lat}, ${lng})`);
+                if(window.currentDeviceSlug === slug) return;
                 
                 // Update active device badge
                 if(name) {
                     const badge = document.getElementById('active-device-name');
-                    if(badge) {
-                        badge.textContent = name;
-                        badge.title = name;
+                    if(badge) { badge.textContent = name; badge.title = name; }
+                }
+
+                // Update Coordinates & Map
+                if(lat && lng) {
+                    currentLat = parseFloat(lat);
+                    currentLng = parseFloat(lng);
+                    
+                    if(window.sentinelMap) {
+                        console.log('[SENTINEL-MAP] Executing FlyTo Sequence...');
+                        window.sentinelMap.flyTo([currentLat, currentLng], 14, { duration: 1.5 });
+                        if(window.sentinelMarker) window.sentinelMarker.setLatLng([currentLat, currentLng]);
+                        setTimeout(() => window.sentinelMap.invalidateSize(), 500);
                     }
+                    
+                    // Clear cache for this location to force fresh data
+                    const cacheKey = `sentinel_weather_${currentLat.toFixed(4)}_${currentLng.toFixed(4)}`;
+                    localStorage.removeItem(cacheKey);
+                    
+                    // Update weather for the new location
+                    window.updateWeather(currentLat, currentLng);
+                    updateText('#sky-location-detail', 'SCANNING NEW SECTOR...');
                 }
                 
                 // Leave old channel
-                echoInstance.leave('sensor-data.' + currentDeviceSlug);
+                window.echoInstance.leave('sensor-data.' + window.currentDeviceSlug);
                 
-                currentDeviceSlug = slug;
+                window.currentDeviceSlug = slug;
                 
                 // Reset dashboard view temporarily
                 updateText('#current-distance', '--');
@@ -97,13 +126,13 @@
                 updateText('#flow-velocity', '0.00');
                 
                 // Join new channel
-                echoInstance.channel('sensor-data.' + currentDeviceSlug)
+                window.echoInstance.channel('sensor-data.' + window.currentDeviceSlug)
                     .listen('.sensor.updated', (e) => {
                         if(e.sensorData) {
                             updateDashboard({ data: e.sensorData, config: e.config });
                         }
                     });
-                    
+                
                 // Force poll to get immediate latest data
                 if (typeof pollTelemetry === 'function') pollTelemetry();
                 
@@ -113,7 +142,7 @@
                     const newLog = document.createElement('div');
                     newLog.className = 'text-cyan-600 font-bold';
                     const time = new Date().toISOString().split('T')[1].substring(0, 8);
-                    newLog.textContent = `[${time}] [SWITCH] Saluran telemetri diubah ke: ${slug}`;
+                    newLog.textContent = `[${time}] [SWITCH] Saluran telemetri diubah ke: ${slug} (${lat}, ${lng})`;
                     terminal.appendChild(newLog);
                     if (terminal.children.length > 15) terminal.removeChild(terminal.firstChild);
                 }
@@ -122,8 +151,8 @@
 
         // --- Polling Fallback (Jika WebSocket bermasalah) ---
         function pollTelemetry() {
-            if(!currentDeviceSlug) return;
-            fetch('/api/sensor-data/latest/' + currentDeviceSlug)
+            if(!window.currentDeviceSlug) return;
+            fetch('/api/sensor-data/latest/' + window.currentDeviceSlug)
                 .then(res => res.json())
                 .then(res => {
                     if (res.status === 'success') {
@@ -212,10 +241,11 @@
         }
 
         // --- Sentinel GIS Map Setup ---
-        let map, marker;
+        window.sentinelMap = null;
+        window.sentinelMarker = null;
         const mapContainer = document.getElementById('sentinel-map');
         if (mapContainer) {
-            map = L.map('sentinel-map', {
+            window.sentinelMap = L.map('sentinel-map', {
                 center: [currentLat, currentLng],
                 zoom: 14,
                 zoomControl: false,
@@ -224,11 +254,11 @@
 
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 maxZoom: 19
-            }).addTo(map);
+            }).addTo(window.sentinelMap);
             
             // Fix Leaflet rendering bug inside animated/hidden containers
             setTimeout(() => {
-                map.invalidateSize();
+                if(window.sentinelMap) window.sentinelMap.invalidateSize();
             }, 1500);
 
             const customIcon = L.divIcon({
@@ -240,10 +270,10 @@
                 iconAnchor: [6, 6]
             });
 
-            marker = L.marker([currentLat, currentLng], { icon: customIcon }).addTo(map);
+            window.sentinelMarker = L.marker([currentLat, currentLng], { icon: customIcon }).addTo(window.sentinelMap);
             
             // Auto-resize map on container change
-            setTimeout(() => map.invalidateSize(), 500);
+            setTimeout(() => { if(window.sentinelMap) window.sentinelMap.invalidateSize(); }, 500);
         }
 
         // --- Utilities & Services ---
@@ -308,7 +338,7 @@
             }
         }
 
-        async function updateWeather(lat, lng) {
+        window.updateWeather = async function(lat, lng) {
             const WEATHER_KEY = "{{ env('OPENWEATHER_API_KEY') }}";
             
             // 1. Resolve Location (Non-blocking but aware)
@@ -321,8 +351,8 @@
             }
 
             try {
-                // Check Cache
-                const cacheKey = `sentinel_weather_${lat.toFixed(2)}_${lng.toFixed(2)}`;
+                // Check Cache (Use higher precision to distinguish close locations)
+                const cacheKey = `sentinel_weather_${lat.toFixed(4)}_${lng.toFixed(4)}`;
                 const cached = localStorage.getItem(cacheKey);
                 if(cached) {
                     const data = JSON.parse(cached);
@@ -686,7 +716,23 @@
             if (Date.now() - lastVoiceTime < 30000) return;
             if ('speechSynthesis' in window) {
                 const u = new SpeechSynthesisUtterance(text);
-                u.lang='id-ID'; u.rate=0.9;
+                
+                // Get all available voices
+                const voices = window.speechSynthesis.getVoices();
+                
+                // Find an Indonesian voice explicitly
+                const idVoice = voices.find(voice => voice.lang.includes('id-ID') || voice.lang.includes('id_ID'));
+                
+                if (idVoice) {
+                    u.voice = idVoice;
+                    console.log('[SENTINEL-VOICE] Using native Indonesian voice:', idVoice.name);
+                } else {
+                    console.warn('[SENTINEL-VOICE] Native Indonesian voice not found, falling back to lang attribute.');
+                }
+
+                u.lang = 'id-ID'; 
+                u.rate = 0.9;
+                u.pitch = 1.0;
                 window.speechSynthesis.speak(u);
                 lastVoiceTime = Date.now();
             }
@@ -707,9 +753,9 @@
         }
 
         // --- Initial Load ---
-        updateWeather(currentLat, currentLng);
+        window.updateWeather(currentLat, currentLng);
         updateTrendUI();
-        setInterval(() => updateWeather(currentLat, currentLng), 600000);
+        setInterval(() => window.updateWeather(currentLat, currentLng), 600000);
     });
     // CALIBRATION LOGIC
     function updateCalibrationVisualizer() {

@@ -171,7 +171,7 @@
             btn.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin mr-2"></i> SAVING...';
 
             try {
-                const response = await fetch("{{ route('devices.update_location', $device->slug) }}", {
+                const response = await fetch("{{ route('it.devices.update_location', $device->slug) }}", {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

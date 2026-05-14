@@ -1,8 +1,139 @@
 @include('partials.dashboard.head')
 
-<body class="min-h-screen relative antialiased selection:bg-blue-200 selection:text-blue-900 pb-10 bg-slate-50 overflow-x-hidden">
+<style>
+    /* DIRECT CACHE BYPASS CSS - ASSEMBLY SYSTEM */
+    @keyframes revealFromLeft {
+        0% { opacity: 0; transform: translateX(-100px); filter: blur(20px); }
+        100% { opacity: 1; transform: translateX(0); filter: blur(0); }
+    }
+    @keyframes revealFromRight {
+        0% { opacity: 0; transform: translateX(100px); filter: blur(20px); }
+        100% { opacity: 1; transform: translateX(0); filter: blur(0); }
+    }
+    @keyframes revealFromBottom {
+        0% { opacity: 0; transform: translateY(100px); filter: blur(20px); }
+        100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+    }
 
-    <!-- Top Accent Line -->
+    .v-reveal-left, .v-reveal-right, .v-reveal-bottom {
+        opacity: 0;
+        animation-duration: 1.5s;
+        animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+        animation-fill-mode: forwards;
+    }
+
+    body.loaded .v-reveal-left { animation-name: revealFromLeft; }
+    body.loaded .v-reveal-right { animation-name: revealFromRight; }
+    body.loaded .v-reveal-bottom { animation-name: revealFromBottom; }
+
+    /* Precise Staggered Delays - 0.4s Interval for Maximum Drama */
+    body.loaded .delay-1 { animation-delay: 0.2s !important; }
+    body.loaded .delay-2 { animation-delay: 0.6s !important; }
+    body.loaded .delay-3 { animation-delay: 1.0s !important; }
+    body.loaded .delay-4 { animation-delay: 1.4s !important; }
+    body.loaded .delay-5 { animation-delay: 1.8s !important; }
+    body.loaded .delay-6 { animation-delay: 2.2s !important; }
+    body.loaded .delay-7 { animation-delay: 2.6s !important; }
+    body.loaded .delay-8 { animation-delay: 3.0s !important; }
+</style>
+
+<body class="min-h-screen relative antialiased selection:bg-blue-200 selection:text-blue-900 pb-10 bg-slate-50 overflow-x-hidden">
+    @guest
+    <!-- Welcome Portal for Guests -->
+    <div id="welcome-portal" class="fixed inset-0 z-[9999] flex items-center justify-center p-6 transition-all duration-700 opacity-0 invisible">
+        <!-- Subtle Backdrop Blur -->
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-md"></div>
+        
+        <!-- Portal Card -->
+        <div class="glass-panel w-full max-w-lg rounded-[3rem] border border-white/40 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] p-10 md:p-14 relative z-10 v-reveal-item scale-90 transition-transform duration-500" id="portal-card">
+            <!-- Decorative Icon -->
+            <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-3xl bg-white shadow-2xl flex items-center justify-center p-4">
+                <img src="{{ asset('assets/img/logo/WaterSenseIcon.png') }}" alt="WaterSense" class="w-full h-full object-contain">
+            </div>
+
+            <div class="text-center mt-6">
+                <h2 class="text-3xl font-black text-slate-800 tracking-tighter leading-none mb-4">Selamat Datang di <span class="text-blue-600">WaterSense</span></h2>
+                <p class="text-sm font-bold text-slate-500 leading-relaxed">Sistem informasi hidrologi cerdas untuk keselamatan warga. Pilih cara Anda untuk mulai memantau.</p>
+                
+                <div class="mt-12 space-y-4">
+                    <!-- Option 1: Safety First -->
+                    <a href="{{ route('login') }}" class="flex items-center justify-between w-full p-5 rounded-3xl bg-slate-900 text-white hover:bg-blue-600 transition-all duration-300 group shadow-xl shadow-slate-900/20">
+                        <div class="flex items-center text-left">
+                            <div class="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-shield-check text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-black uppercase tracking-widest opacity-60">Direkomendasikan</p>
+                                <p class="text-sm font-black uppercase tracking-widest">Masuk / Daftar Akun</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right mr-2 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1"></i>
+                    </a>
+
+                    <!-- Option 2: Quick Monitor -->
+                    <button onclick="closePortal()" class="flex items-center justify-between w-full p-5 rounded-3xl bg-white border-2 border-slate-100 text-slate-600 hover:border-blue-500/30 hover:bg-blue-50/30 transition-all duration-300 group">
+                        <div class="flex items-center text-left">
+                            <div class="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center mr-4 group-hover:bg-blue-500 group-hover:text-white transition-all">
+                                <i class="fa-solid fa-eye text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-black uppercase tracking-widest opacity-60">Akses Cepat</p>
+                                <p class="text-sm font-black uppercase tracking-widest">Lanjutkan Sebagai Tamu</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right mr-2 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1"></i>
+                    </button>
+                </div>
+
+                <p class="mt-8 text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] opacity-60">
+                    Sistem Pemantauan Citarum Real-Time
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        body.portal-active {
+            /* allow scrolling but we might want to lock it for specific UX. 
+               However, user requested no missing parts, so we allow scrolling. */
+        }
+        #welcome-portal.active {
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+        #welcome-portal.active #portal-card {
+            transform: scale(1) translateY(0) !important;
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const portal = document.getElementById('welcome-portal');
+            if (portal) {
+                // Selalu munculkan portal saat halaman dimuat penuh (termasuk Refresh)
+                document.body.classList.add('portal-active');
+                setTimeout(() => {
+                    portal.classList.add('active');
+                }, 500);
+            }
+        });
+
+        function closePortal() {
+            const portal = document.getElementById('welcome-portal');
+            if(!portal) return;
+            
+            portal.style.opacity = '0';
+            portal.style.transition = 'all 0.8s ease';
+            
+            document.body.classList.remove('portal-active');
+            
+            setTimeout(() => {
+                portal.classList.remove('active');
+                portal.remove(); // Hapus dari DOM agar interaksi di belakangnya aktif
+            }, 800);
+        }
+    </script>
+    @endguest    <!-- Top Accent Line -->
     <div class="fixed top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 z-50"></div>
 
     <!-- Main Container -->
@@ -12,12 +143,12 @@
         @include('partials.dashboard.header')
 
         <!-- Unified Cockpit Interface -->
-        <div class="glass-panel rounded-[2.5rem] p-4 lg:p-6 mt-4 bg-white/60 shadow-2xl backdrop-blur-2xl border border-white/80 animate-assemble-bg" style="opacity: 0; perspective: 2500px;">
+        <div class="glass-panel rounded-[2.5rem] p-4 lg:p-6 mt-4 bg-white/60 shadow-2xl backdrop-blur-2xl border border-white/80" style="perspective: 2500px;">
             
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch transform-style-3d">
                 
                 <!-- Column 1: Weather & Guides (3 Cols) -->
-                <div class="lg:col-span-3 flex flex-col space-y-4 animate-assemble-left" style="opacity: 0;">
+                <div class="lg:col-span-3 flex flex-col space-y-4">
                     
                     <!-- Title inside the cockpit -->
                     <div class="mb-4 flex flex-col space-y-4">
@@ -48,7 +179,7 @@
                                 <div class="p-2 space-y-1">
                                     @if(isset($allDevices) && count($allDevices) > 0)
                                         @foreach($allDevices as $device)
-                                        <button type="button" onclick="userSwitchDevice('{{ $device->slug }}', '{{ addslashes($device->name) }}', '{{ addslashes($device->location) }}')" class="w-full text-left p-3 rounded-xl hover:bg-blue-50/80 transition-colors flex items-center space-x-3 group/item">
+                                        <button type="button" onclick="userSwitchDevice('{{ $device->slug }}', '{{ addslashes($device->name) }}', '{{ addslashes($device->location) }}', {{ $device->latitude ?? -6.2088 }}, {{ $device->longitude ?? 106.8456 }})" class="w-full text-left p-3 rounded-xl hover:bg-blue-50/80 transition-colors flex items-center space-x-3 group/item">
                                             <div class="w-2 h-2 rounded-full {{ $device->status === 'online' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500' }} shrink-0"></div>
                                             <div class="flex-1 overflow-hidden">
                                                 <div class="text-xs font-bold text-slate-800 truncate group-hover/item:text-blue-600 transition-colors">{{ $device->name }}</div>
@@ -65,7 +196,7 @@
                     </div>
 
                     <!-- Compact Weather -->
-                    <div class="rounded-3xl p-5 relative overflow-hidden bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/30 group">
+                    <div class="v-reveal-left delay-1 rounded-3xl p-5 relative overflow-hidden bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/30 group">
                         <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all"></div>
                         <div class="relative z-10">
                             <div class="flex items-center space-x-2 mb-3">
@@ -75,8 +206,8 @@
                             <div class="flex items-center space-x-4 mb-4">
                                 <div id="sky-icon-main" class="text-5xl filter drop-shadow-md"><i class="fa-solid fa-cloud-sun text-amber-300"></i></div>
                                 <div>
-                                    <div id="sky-temp" class="text-4xl font-black tracking-tighter leading-none">--°C</div>
-                                    <div id="sky-desc" class="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-1">Memuat...</div>
+                                    <div id="sky-temp" class="text-4xl font-black tracking-tighter leading-none skeleton w-24 h-10 mb-1"></div>
+                                    <div id="sky-desc" class="text-[10px] font-bold text-blue-100 uppercase tracking-widest mt-1 skeleton w-32 h-3"></div>
                                 </div>
                             </div>
                             <div class="flex items-center justify-between pt-3 border-t border-white/20">
@@ -96,7 +227,7 @@
 
 
                     <!-- Compact Status Guide -->
-                    <div class="rounded-3xl p-5 bg-white border border-slate-100 shadow-sm flex-1">
+                    <div class="v-reveal-left delay-2 rounded-3xl p-5 bg-white border border-slate-100 shadow-sm flex-1">
                         <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4 flex items-center">
                             <i class="fa-solid fa-circle-info mr-2"></i> Panduan
                         </h3>
@@ -122,9 +253,9 @@
                 </div>
 
                 <!-- Column 2: The Core River Visual (5 Cols) -->
-                <div class="lg:col-span-5 relative min-h-[400px] xl:min-h-[500px] flex items-stretch animate-assemble-center" style="opacity: 0;">
+                <div class="lg:col-span-5 relative min-h-[400px] xl:min-h-[500px] flex items-stretch">
                     <!-- Glass Tank natively occupying the space without its own panel background -->
-                    <div class="glass-tank-container relative w-full h-full rounded-[2rem] shadow-[inset_0_0_50px_rgba(0,0,0,0.05)] bg-slate-100/50 border-4 border-white/60 overflow-hidden">
+                    <div class="v-reveal-bottom delay-3 glass-tank-container relative w-full h-full rounded-[2rem] shadow-[inset_0_0_50px_rgba(0,0,0,0.05)] bg-slate-100/50 border-4 border-white/60 overflow-hidden">
                         
                         <!-- Immersive Weather Overlay -->
                         <div class="weather-rain" id="weather-rain">
@@ -175,10 +306,10 @@
                 </div>
 
                 <!-- Column 3: Telemetry & Alerts (4 Cols) -->
-                <div class="lg:col-span-4 flex flex-col justify-center space-y-4 animate-assemble-right" style="opacity: 0;">
+                <div class="lg:col-span-4 flex flex-col justify-center space-y-4">
                     
                     <!-- Alert Banner (Integrated) -->
-                    <div id="alert-banner" class="px-5 py-3 rounded-2xl flex items-center space-x-3 transition-all duration-300 bg-emerald-50 text-emerald-600 border border-emerald-100 hidden">
+                    <div id="alert-banner" class="v-reveal-right delay-4 px-5 py-3 rounded-2xl flex items-center space-x-3 transition-all duration-300 bg-emerald-50 text-emerald-600 border border-emerald-100 hidden">
                         <i id="alert-icon" class="fa-solid fa-shield-check text-3xl"></i>
                         <div>
                             <div class="text-[10px] font-black tracking-widest uppercase mb-1">Status Sungai</div>
@@ -189,13 +320,13 @@
                     <!-- Main KPI & Map Row -->
                     <div class="grid grid-cols-2 gap-4 flex-1">
                         <!-- Main TMA KPI (Massive) -->
-                        <div class="rounded-[2rem] p-6 bg-white border border-slate-100 shadow-sm relative overflow-hidden group hover:border-blue-200 transition-colors flex flex-col justify-center">
+                        <div class="v-reveal-right delay-5 rounded-[2rem] p-6 bg-white border border-slate-100 shadow-sm relative overflow-hidden group hover:border-blue-200 transition-colors flex flex-col justify-center">
                             <div class="absolute -right-6 -bottom-6 opacity-5 group-hover:opacity-10 transition-opacity">
                                 <i class="fa-solid fa-water text-8xl"></i>
                             </div>
                             <h3 class="text-[10px] text-slate-400 font-black mb-3 uppercase tracking-[0.2em] relative z-10">Tinggi Permukaan Air</h3>
                             <div class="flex items-baseline mb-4 relative z-10">
-                                <div id="water-level" class="text-5xl xl:text-6xl font-black text-slate-800 odometer tracking-tighter leading-none font-rajdhani">--</div>
+                                <div id="water-level" class="text-5xl xl:text-6xl font-black text-slate-800 odometer tracking-tighter leading-none font-rajdhani skeleton w-32 h-14"></div>
                                 <span class="text-lg text-blue-500 font-bold ml-2">MDPL</span>
                             </div>
                             <div class="flex items-center space-x-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 inline-flex px-3 py-1.5 rounded-lg border border-slate-100 relative z-10">
@@ -210,7 +341,7 @@
                         </div>
 
                         <!-- GIS Satellite Map -->
-                        <div class="rounded-[2rem] p-2 bg-white border border-slate-100 shadow-xl overflow-hidden relative flex flex-col">
+                        <div class="v-reveal-right delay-6 rounded-[2rem] p-2 bg-white border border-slate-100 shadow-xl overflow-hidden relative flex flex-col">
                             <div class="absolute top-4 left-4 z-[400] flex items-center bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
                                 <span class="w-2 h-2 rounded-full bg-blue-500 mr-2 animate-ping" id="map-radar-dot"></span>
                                 <span class="text-[9px] font-black uppercase text-slate-600 tracking-widest">Satelit Aktif</span>
@@ -221,15 +352,15 @@
 
                     <!-- Advanced Metrics Grid (Distance, Velocity, ETA) -->
                     <div class="grid grid-cols-2 gap-4">
-                        <div class="rounded-3xl p-5 bg-white border border-slate-100 shadow-sm flex flex-col justify-center">
+                        <div class="v-reveal-bottom delay-7 rounded-3xl p-5 bg-white border border-slate-100 shadow-sm flex flex-col justify-center">
                             <h3 class="text-[9px] text-slate-400 font-black mb-1 uppercase tracking-[0.2em] leading-tight">Jarak Sensor</h3>
                             <div class="flex items-baseline">
-                                <span id="current-distance" class="text-3xl font-bold text-slate-700 odometer font-rajdhani">--</span>
+                                <span id="current-distance" class="text-3xl font-bold text-slate-700 odometer font-rajdhani skeleton w-16 h-8"></span>
                                 <span class="text-xs text-slate-400 font-bold ml-1">cm</span>
                             </div>
                         </div>
                         
-                        <div class="rounded-3xl p-5 bg-white border border-slate-100 shadow-sm flex flex-col justify-center">
+                        <div class="v-reveal-bottom delay-8 rounded-3xl p-5 bg-white border border-slate-100 shadow-sm flex flex-col justify-center">
                             <h3 class="text-[9px] text-slate-400 font-black mb-1 uppercase tracking-[0.2em] leading-tight">Laju Air</h3>
                             <div class="flex items-baseline text-blue-500 transition-colors" id="velocity-container">
                                 <i class="fa-solid fa-arrow-right text-xs mr-1" id="velocity-icon"></i>
@@ -238,7 +369,7 @@
                             </div>
                         </div>
 
-                        <div class="col-span-2 rounded-3xl p-5 bg-white border border-slate-100 shadow-xl flex items-center justify-between relative overflow-hidden group" id="eta-card">
+                        <div class="v-reveal-bottom delay-8 col-span-2 rounded-3xl p-5 bg-white border border-slate-100 shadow-xl flex items-center justify-between relative overflow-hidden group" id="eta-card">
                             <!-- AI Decorator -->
                             <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
                                 <i class="fa-solid fa-microchip text-6xl text-blue-500"></i>
@@ -257,12 +388,96 @@
 
             </div>
         </div>
+        
+        <!-- WATER LEVEL HISTORY MATRIX -->
+        <div class="v-reveal-bottom delay-8 mt-6">
+            <div class="glass-panel rounded-[2.5rem] p-6 lg:p-8 bg-white/60 shadow-2xl backdrop-blur-2xl border border-white/80 overflow-hidden relative">
+                <div class="absolute -right-20 -top-20 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl"></div>
+                
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 relative z-10">
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-800 tracking-tight uppercase flex items-center">
+                            <i class="fa-solid fa-chart-line mr-3 text-blue-500"></i> Riwayat Elevasi <span class="text-blue-500 ml-2" id="history-device-name">{{ $primaryDevice->name ?? 'Citarum' }}</span>
+                        </h2>
+                        <p class="text-slate-500 text-xs font-bold tracking-widest mt-1">ANALISIS TREN HISTORIS PER JAM</p>
+                    </div>
+
+                    <!-- Range Selectors -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="bg-slate-100/80 p-1.5 rounded-2xl flex items-center space-x-1 border border-slate-200/50 shadow-inner">
+                            <button onclick="updateHistoryRange('daily', this)" class="history-range-btn px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 bg-white text-blue-600 shadow-sm border border-blue-100">Harian</button>
+                            <button onclick="updateHistoryRange('weekly', this)" class="history-range-btn px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 text-slate-500 hover:text-blue-500">Mingguan</button>
+                            <button onclick="updateHistoryRange('monthly', this)" class="history-range-btn px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 text-slate-500 hover:text-blue-500">Bulanan</button>
+                            <button onclick="updateHistoryRange('yearly', this)" class="history-range-btn px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 text-slate-500 hover:text-blue-500">Tahunan</button>
+                        </div>
+                        
+                        <!-- Custom Range Picker -->
+                        <div class="flex items-center space-x-2 bg-white/80 border border-slate-200 rounded-2xl p-1 shadow-sm">
+                            <input type="date" id="history-start-date" class="bg-transparent border-none text-[10px] font-bold text-slate-600 focus:ring-0 p-1">
+                            <span class="text-slate-300 text-[10px] font-bold">SD</span>
+                            <input type="date" id="history-end-date" class="bg-transparent border-none text-[10px] font-bold text-slate-600 focus:ring-0 p-1">
+                            <button onclick="updateHistoryRange('custom', this)" class="bg-blue-500 text-white p-2 rounded-xl hover:bg-blue-600 transition-colors shadow-lg shadow-blue-500/30">
+                                <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Chart Canvas -->
+                <div class="relative h-[350px] lg:h-[450px] w-full bg-slate-50/50 rounded-3xl p-4 border border-slate-100 shadow-inner group">
+                    <div id="history-chart-loading" class="absolute inset-0 z-20 flex items-center justify-center bg-white/40 backdrop-blur-sm hidden">
+                        <div class="flex flex-col items-center">
+                            <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                            <span class="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-4">Sinkronisasi Data...</span>
+                        </div>
+                    </div>
+                    <canvas id="historyMainChart"></canvas>
+                </div>
+                
+                <!-- Bottom Stats Breakdown -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                    <div class="bg-white/80 border border-slate-100 p-4 rounded-[1.5rem] shadow-sm">
+                        <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Rata-rata TMA</div>
+                        <div class="text-xl font-bold text-slate-700" id="hist-avg-tma">-- m</div>
+                    </div>
+                    <div class="bg-white/80 border border-slate-100 p-4 rounded-[1.5rem] shadow-sm border-l-4 border-l-blue-500">
+                        <div class="text-[9px] font-black text-blue-500 uppercase tracking-widest mb-1">Puncak Tertinggi</div>
+                        <div class="text-xl font-bold text-slate-700" id="hist-max-tma">-- m</div>
+                    </div>
+                    <div class="bg-white/80 border border-slate-100 p-4 rounded-[1.5rem] shadow-sm border-l-4 border-l-cyan-500">
+                        <div class="text-[9px] font-black text-cyan-500 uppercase tracking-widest mb-1">Level Terendah</div>
+                        <div class="text-xl font-bold text-slate-700" id="hist-min-tma">-- m</div>
+                    </div>
+                    <div class="bg-white/80 border border-slate-100 p-4 rounded-[1.5rem] shadow-sm">
+                        <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Sampel Jam</div>
+                        <div class="text-xl font-bold text-slate-700" id="hist-sample-count">--</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Scripts Application -->
     @include('partials.dashboard.scripts')
     
     <script>
+        // Trigger Animations Faster (DOMContentLoaded)
+        function triggerReveal() {
+            if(!document.body.classList.contains('loaded')) {
+                console.log('[SENTINEL-SYSTEM] Triggering Sequential Reveal...');
+                document.body.classList.add('loaded'); 
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', triggerReveal);
+        window.addEventListener('load', triggerReveal); // Backup
+        setTimeout(triggerReveal, 3000); // EMERGENCY FAIL-SAFE (3 Seconds)
+
+        // Clean skeletons (optional after long delay)
+        setTimeout(() => {
+            document.querySelectorAll('.skeleton-item-to-remove').forEach(el => el.classList.remove('skeleton'));
+        }, 5000);
+
         // Live Clock logic
         setInterval(() => {
             const clockEl = document.getElementById('live-clock');
@@ -303,7 +518,7 @@
             }
         });
 
-        function userSwitchDevice(slug, name, location) {
+        function userSwitchDevice(slug, name, location, lat, lng) {
             // Update UI Title
             document.getElementById('active-device-name').textContent = name;
             
@@ -312,7 +527,7 @@
             
             // Panggil switchDevice bawaan scripts.blade.php
             if(typeof window.switchDevice === 'function') {
-                window.switchDevice(slug, name);
+                window.switchDevice(slug, name, lat, lng);
                 
                 // Update URL parameter silently for shareability
                 window.history.pushState({}, '', '/dashboard/' + slug);
@@ -342,5 +557,8 @@
         });
     </script>
 
+    <!-- System Scripts -->
+    @include('partials.dashboard.scripts')
+    @include('partials.dashboard.history_scripts')
 </body>
 </html>

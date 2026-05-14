@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Water Monitoring Dashboard | Real-Time Water Level</title>
+    <title>WaterSense | Real-Time Water Level Monitoring</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ asset('assets/img/logo/WaterSenseIcon.png') }}">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -482,6 +484,72 @@
             padding: 12px;
             color: white;
             min-width: 200px;
+        }
+        /* --- V-REVEAL SYSTEM (CACHE BUSTER) --- */
+        @keyframes vRevealLanding {
+            0% { opacity: 0; transform: translateY(40px) scale(0.95); filter: blur(15px); }
+            100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+        }
+
+        .v-reveal-item {
+            opacity: 0;
+            transform: translateY(40px) scale(0.95);
+            filter: blur(15px);
+            transition: none; /* Prevent interference */
+        }
+
+        body.loaded .v-reveal-item {
+            animation: vRevealLanding 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+
+        /* Precise Staggered Delays */
+        .delay-1 { animation-delay: 0.2s; }
+        .delay-2 { animation-delay: 0.4s; }
+        .delay-3 { animation-delay: 0.6s; }
+        .delay-4 { animation-delay: 0.8s; }
+        .delay-5 { animation-delay: 1.0s; }
+        .delay-6 { animation-delay: 1.2s; }
+        .delay-7 { animation-delay: 1.4s; }
+        .delay-8 { animation-delay: 1.6s; }
+        .delay-9 { animation-delay: 1.8s; }
+        /* --- LUXURY PRELOADER & SKELETON --- */
+        .preloader {
+            position: fixed;
+            inset: 0;
+            background: #fff;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1), visibility 1s;
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite linear;
+            border-radius: 8px;
+        }
+
+        @keyframes shimmer {
+            from { background-position: 200% 0; }
+            to { background-position: -200% 0; }
+        }
+
+        .preloader.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .boot-icon {
+            animation: boot-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes boot-pulse {
+            0%, 100% { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.3)); }
+            50% { transform: scale(1.1); opacity: 0.7; filter: drop-shadow(0 0 30px rgba(59, 130, 246, 0.6)); }
         }
     </style>
 </head>

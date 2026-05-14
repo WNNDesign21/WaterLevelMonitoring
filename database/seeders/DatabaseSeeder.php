@@ -15,12 +15,20 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Create Default IT Administrator
+        User::updateOrCreate(
+            ['email' => 'admin@watersense.id'],
+            [
+                'name' => 'WNN Administrator',
+                'password' => bcrypt('password123'),
+                'role' => 'Administrator IT',
+                'phone' => '081234567890',
+                'address' => 'Pusat Kendali WaterSense, Karawang',
+                'latitude' => -6.3227,
+                'longitude' => 107.3376,
+                'emergency_phone' => '112',
+            ]
+        );
 
         $this->call(DeviceSeeder::class);
     }
