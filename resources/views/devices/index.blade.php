@@ -390,10 +390,12 @@
         let markers = {};
 
         function initMasterMap() {
+            // Start with a "Global View" (Zoom level 2)
             map = L.map('master-map', {
                 zoomControl: false,
-                attributionControl: false
-            }).setView([-6.3227, 107.3376], 12);
+                attributionControl: false,
+                scrollWheelZoom: false // Disable during animation
+            }).setView([-2.5489, 118.0149], 2); // Center of Indonesia but zoomed way out
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19
@@ -415,6 +417,7 @@
             @endforeach
         }
 
+        // ... (addMapMarker function remains same) ...
         function addMapMarker(lat, lng, name, status, slug) {
             const color = status === 'online' ? '#10b981' : '#ef4444';
             const iconHtml = `
@@ -454,18 +457,30 @@
             markers[slug] = marker;
         }
 
-        // Initialize on load
+        // Initialize on load with Fly-In Sequence
         document.addEventListener('DOMContentLoaded', () => {
-            // Match delay-2 (0.5s)
             setTimeout(() => {
                 initMasterMap();
                 const mapEl = document.getElementById('master-map');
                 if(mapEl) mapEl.style.opacity = '1';
                 
-                // Force size recalculation after animation finishes
+                // --- CINEMATIC FLY-IN SEQUENCE ---
                 setTimeout(() => {
-                    if(map) map.invalidateSize();
-                }, 1000);
+                    if(map) {
+                        map.invalidateSize();
+                        // Flying to Karawang Sector from Space
+                        map.flyTo([-6.3227, 107.3376], 12, {
+                            animate: true,
+                            duration: 4, // 4 seconds of smooth flight
+                            easeLinearity: 0.25
+                        });
+                        
+                        // Re-enable scroll zoom after landing
+                        setTimeout(() => {
+                            map.scrollWheelZoom.enable();
+                        }, 4000);
+                    }
+                }, 800); // Wait for container reveal animation to be almost done
             }, 500);
         });
     </script>
