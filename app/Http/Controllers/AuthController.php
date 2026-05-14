@@ -66,7 +66,7 @@ class AuthController extends Controller
 
             // If must change password, redirect to change password page
             if ($user->must_change_password) {
-                return redirect()->route('password.change');
+                return redirect()->route('password.change.show');
             }
 
             // If profile is incomplete, redirect to completion page
@@ -186,7 +186,7 @@ class AuthController extends Controller
 
         // If must change password, redirect to change password page
         if ($user->must_change_password) {
-            return redirect()->route('password.change');
+            return redirect()->route('password.change.show');
         }
 
         // Check if profile is complete

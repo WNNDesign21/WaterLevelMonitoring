@@ -21,7 +21,7 @@
         <div class="bg-white/80 backdrop-blur-xl border border-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.05)] p-8 relative overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-cyan-500"></div>
             
-            <form action="{{ route('password.update') }}" method="POST" class="space-y-6">
+            <form action="{{ route('password.change.store') }}" method="POST" class="space-y-6">
                 @csrf
                 
                 <div class="space-y-2">
