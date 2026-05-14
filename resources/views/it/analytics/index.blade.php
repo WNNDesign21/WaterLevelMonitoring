@@ -30,7 +30,7 @@
 
     .v-reveal-left, .v-reveal-right, .v-reveal-bottom, .v-reveal-top, .v-reveal-scale {
         opacity: 0;
-        animation-duration: 1.2s;
+        animation-duration: 1.8s;
         animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
         animation-fill-mode: forwards;
         animation-delay: var(--delay, 0s);
@@ -82,7 +82,7 @@
     <div class="flex flex-col h-[calc(100vh-1rem)] gap-2 w-full">
         
         <!-- COMPACT COMMAND HEADER -->
-        <header class="cockpit-card rounded-xl p-4 flex items-center justify-between shrink-0 border-blue-100 bg-white/90 v-reveal-top" style="--delay: 0.1s">
+        <header class="cockpit-card rounded-xl p-4 flex items-center justify-between shrink-0 border-blue-100 bg-white/90 v-reveal-top" style="--delay: 0.2s">
             <div class="flex items-center space-x-8">
                 <!-- Branding -->
                 <div class="flex items-center space-x-4 border-r border-slate-200 pr-8">
@@ -134,7 +134,7 @@
         <main class="flex-1 flex gap-2 min-h-0 w-full">
             
             <!-- LEFT CONTROL PANEL (DENSE) -->
-            <aside class="w-80 flex flex-col gap-2 shrink-0 v-reveal-left" style="--delay: 0.3s">
+            <aside class="w-80 flex flex-col gap-2 shrink-0 v-reveal-left" style="--delay: 0.6s">
                 
                 <!-- Filter Section -->
                 <section class="cockpit-card rounded-2xl p-5 flex flex-col border-slate-200 bg-white">
@@ -203,7 +203,7 @@
             <div class="flex-1 flex flex-col gap-2 min-w-0">
                 
                 <!-- Main Intelligence View -->
-                <section class="flex-1 cockpit-card rounded-[3rem] p-8 border-slate-200 bg-white relative flex flex-col scanline-effect overflow-hidden shadow-2xl v-reveal-scale" style="--delay: 0.5s">
+                <section class="flex-1 cockpit-card rounded-[3rem] p-8 border-slate-200 bg-white relative flex flex-col scanline-effect overflow-hidden shadow-2xl v-reveal-scale" style="--delay: 1.0s">
                     <div class="flex items-center justify-between mb-6 z-20">
                         <div>
                             <h3 class="text-2xl font-black text-slate-800 tracking-tighter uppercase" id="chart-title">Intelligence_Horizon</h3>
@@ -235,7 +235,7 @@
                 </section>
 
                 <!-- Bottom Telemetry Console (New) -->
-                <section class="h-40 cockpit-card rounded-2xl p-4 border-slate-200 bg-white overflow-hidden flex flex-col shadow-lg v-reveal-bottom" style="--delay: 0.9s">
+                <section class="h-40 cockpit-card rounded-2xl p-4 border-slate-200 bg-white overflow-hidden flex flex-col shadow-lg v-reveal-bottom" style="--delay: 1.8s">
                     <div class="flex items-center justify-between mb-3 shrink-0 border-b border-slate-100 pb-2">
                         <span class="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em] flex items-center">
                             <span class="w-2 h-2 rounded-full bg-blue-500 mr-3 animate-pulse"></span> System_Event_Log
@@ -251,7 +251,7 @@
             </div>
 
             <!-- RIGHT ANALYTICS SIDEBAR (NEW) -->
-            <aside class="w-80 flex flex-col gap-2 shrink-0 v-reveal-right" style="--delay: 0.7s">
+            <aside class="w-80 flex flex-col gap-2 shrink-0 v-reveal-right" style="--delay: 1.4s">
                 <!-- Predictive Summary -->
                 <section class="cockpit-card rounded-2xl p-5 flex flex-col border-slate-200 bg-white">
                     <h2 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-5">AI_Projection</h2>
