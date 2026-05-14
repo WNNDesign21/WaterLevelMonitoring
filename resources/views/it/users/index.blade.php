@@ -2,27 +2,41 @@
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 
     <style>
-        @keyframes revealFadeUp {
-            0% { opacity: 0; transform: translateY(30px); filter: blur(10px); }
+        /* JARVIS CINEMATIC ENTRY PROTOCOL */
+        @keyframes revealFromLeft {
+            0% { opacity: 0; transform: translateX(-100px); filter: blur(20px); }
+            100% { opacity: 1; transform: translateX(0); filter: blur(0); }
+        }
+        @keyframes revealFromRight {
+            0% { opacity: 0; transform: translateX(100px); filter: blur(20px); }
+            100% { opacity: 1; transform: translateX(0); filter: blur(0); }
+        }
+        @keyframes revealFromBottom {
+            0% { opacity: 0; transform: translateY(100px); filter: blur(20px); }
             100% { opacity: 1; transform: translateY(0); filter: blur(0); }
         }
-
-        .v-reveal-header { 
-            opacity: 0; 
-            transform: translateY(-70px);
-            filter: blur(15px);
-            transition: all 1.4s cubic-bezier(0.19, 1, 0.22, 1);
+        @keyframes revealFromTop {
+            0% { opacity: 0; transform: translateY(-100px); filter: blur(20px); }
+            100% { opacity: 1; transform: translateY(0); filter: blur(0); }
         }
-        body.loaded .v-reveal-header { 
-            opacity: 1; 
-            transform: translateY(0);
-            filter: blur(0);
+        @keyframes revealScale {
+            0% { opacity: 0; transform: scale(0.9); filter: blur(20px); }
+            100% { opacity: 1; transform: scale(1); filter: blur(0); }
         }
 
-        .v-reveal-item { opacity: 0; }
-        body.loaded .v-reveal-item { 
-            animation: revealFadeUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; 
+        .v-reveal-left, .v-reveal-right, .v-reveal-bottom, .v-reveal-top, .v-reveal-scale {
+            opacity: 0;
+            animation-duration: 1.8s;
+            animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+            animation-fill-mode: forwards;
+            animation-delay: var(--delay, 0s);
         }
+
+        body.loaded .v-reveal-left { animation-name: revealFromLeft; }
+        body.loaded .v-reveal-right { animation-name: revealFromRight; }
+        body.loaded .v-reveal-bottom { animation-name: revealFromBottom; }
+        body.loaded .v-reveal-top { animation-name: revealFromTop; }
+        body.loaded .v-reveal-scale { animation-name: revealScale; }
 
         @keyframes fade-in {
             from { opacity: 0; transform: translateX(10px); }
@@ -37,7 +51,7 @@
 
     <div class="max-w-[2000px] mx-auto px-6 mt-6">
         <!-- HEADER: Consolidated WaterSense IT Command Center -->
-        <div class="mb-10 v-reveal-header">
+        <div class="mb-10 v-reveal-top" style="--delay: 0.2s">
             <div class="glass-panel p-4 md:p-5 rounded-[2rem] bg-white/60 border border-white shadow-xl flex flex-col lg:flex-row items-center justify-between gap-6">
                 <!-- Branding Section (Left) -->
                 <div class="flex items-center space-x-4">
@@ -109,7 +123,7 @@
                 <!-- Alerts -->
                 <!-- One-Time Password Display -->
                 @if(session('success_password'))
-                <div class="glass-panel p-8 rounded-[2rem] bg-blue-600/10 border border-blue-600/20 v-reveal-item relative overflow-hidden">
+                <div class="glass-panel p-8 rounded-[2rem] bg-blue-600/10 border border-blue-600/20 v-reveal-scale relative overflow-hidden" style="--delay: 0.8s">
                     <div class="absolute top-0 right-0 p-8 opacity-10">
                         <i class="fa-solid fa-key text-6xl text-blue-600"></i>
                     </div>
@@ -143,21 +157,21 @@
                 @endif
 
                 @if(session('success'))
-                <div class="glass-panel p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-xs font-bold flex items-center v-reveal-item">
+                <div class="glass-panel p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-xs font-bold flex items-center v-reveal-scale" style="--delay: 0.8s">
                     <i class="fa-solid fa-circle-check mr-3 text-lg"></i>
                     {{ session('success') }}
                 </div>
                 @endif
 
                 @if(session('error'))
-                <div class="glass-panel p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 text-xs font-bold flex items-center v-reveal-item">
+                <div class="glass-panel p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 text-xs font-bold flex items-center v-reveal-scale" style="--delay: 0.8s">
                     <i class="fa-solid fa-circle-xmark mr-3 text-lg"></i>
                     {{ session('error') }}
                 </div>
                 @endif
 
                 <!-- Header -->
-                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 v-reveal-item">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 v-reveal-left" style="--delay: 0.4s">
                     <div class="text-center lg:text-left">
                         <h1 class="text-3xl md:text-5xl font-black text-slate-800 tracking-tighter leading-none mb-3">
                             User <span class="text-blue-600">Management</span>
@@ -192,7 +206,7 @@
                 </div>
 
                 <!-- OVERPOWERED SECURITY METRICS -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 v-reveal-item delay-1">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 v-reveal-bottom" style="--delay: 0.6s">
                     <div class="glass-panel p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm flex items-center justify-between group hover:border-blue-500 transition-all">
                         <div class="flex items-center space-x-4">
                             <div class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
@@ -258,7 +272,7 @@
                     
                     <!-- LEFT: MAIN USER MATRIX (9 Cols) -->
                     <div class="lg:col-span-9 space-y-6">
-                        <div class="v-reveal-item delay-1">
+                        <div class="v-reveal-left" style="--delay: 1.0s">
                             <!-- Desktop Table View -->
                             <div class="hidden md:block glass-panel rounded-[2.5rem] border border-white shadow-2xl bg-white/40 backdrop-blur-xl overflow-hidden">
                                 <div class="overflow-x-auto">
@@ -340,7 +354,7 @@
                     <!-- RIGHT: SYSTEM ACTIVITY LOG (3 Cols) -->
                     <aside class="lg:col-span-3 space-y-6">
                         <!-- Access Trend Chart -->
-                        <div class="v-reveal-item delay-3 glass-panel p-6 rounded-[2.5rem] bg-white border border-slate-100 shadow-xl overflow-hidden">
+                        <div class="v-reveal-right glass-panel p-6 rounded-[2.5rem] bg-white border border-slate-100 shadow-xl overflow-hidden" style="--delay: 1.2s">
                             <div class="flex items-center justify-between mb-4">
                                 <h3 class="text-[10px] font-black text-slate-800 uppercase tracking-widest">Access_Density</h3>
                                 <span class="text-[8px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-md uppercase">24H_HISTORY</span>
@@ -348,7 +362,7 @@
                             <div id="accessTrendChart" style="height: 140px;" class="w-full"></div>
                         </div>
 
-                        <div class="v-reveal-item delay-4 glass-panel p-6 rounded-[2.5rem] bg-white border border-slate-100 shadow-xl relative overflow-hidden h-full flex flex-col">
+                        <div class="v-reveal-right glass-panel p-6 rounded-[2.5rem] bg-white border border-slate-100 shadow-xl relative overflow-hidden h-full flex flex-col" style="--delay: 1.6s">
                             <div class="absolute top-0 right-0 p-8 opacity-5">
                                 <i class="fa-solid fa-satellite-dish text-8xl"></i>
                             </div>
