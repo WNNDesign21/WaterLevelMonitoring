@@ -488,7 +488,26 @@
                 
                 // --- ROBUST LOAD HANDLING ---
                 const hideScanner = () => {
-                    if(mapEl) mapEl.style.opacity = '1';
+                    const mapEl = document.getElementById('master-map');
+                    if(!mapEl || mapEl.style.opacity === '1') return; // Prevent double trigger
+                    
+                    mapEl.style.opacity = '1';
+                    
+                    // Trigger Fly-In EXACTLY when map becomes visible
+                    if(map) {
+                        map.invalidateSize();
+                        console.log('[SENTINEL] Initiating Orbital Descent...');
+                        map.flyTo([-6.3227, 107.3376], 12, {
+                            animate: true,
+                            duration: 5, // Slightly longer for more drama
+                            easeLinearity: 0.25
+                        });
+                        
+                        setTimeout(() => {
+                            map.scrollWheelZoom.enable();
+                        }, 5000);
+                    }
+
                     setTimeout(() => {
                         if(scanner) scanner.classList.add('opacity-0');
                         if(placeholder) placeholder.classList.add('opacity-0');
@@ -496,41 +515,22 @@
                             if(scanner) scanner.remove();
                             if(placeholder) placeholder.remove();
                         }, 1000);
-                    }, 500);
+                    }, 300);
                 };
 
-                // Fallback: Force hide scanner after 6 seconds if map tiles are slow
-                const fallbackTimeout = setTimeout(hideScanner, 6000);
+                // Fallback: Force hide scanner after 5 seconds
+                const fallbackTimeout = setTimeout(hideScanner, 5000);
 
                 if(map) {
-                    // Listen to the map itself for any tile activity
                     map.on('tileload', () => {
                         clearTimeout(fallbackTimeout);
                         hideScanner();
                     });
-                    
-                    // Also try 'load' event
                     map.on('load', () => {
                         clearTimeout(fallbackTimeout);
                         hideScanner();
                     });
                 }
-                
-                // --- CINEMATIC FLY-IN SEQUENCE ---
-                setTimeout(() => {
-                    if(map) {
-                        map.invalidateSize();
-                        map.flyTo([-6.3227, 107.3376], 12, {
-                            animate: true,
-                            duration: 4,
-                            easeLinearity: 0.25
-                        });
-                        
-                        setTimeout(() => {
-                            map.scrollWheelZoom.enable();
-                        }, 4000);
-                    }
-                }, 800);
             }, 500);
         });
     </script>
