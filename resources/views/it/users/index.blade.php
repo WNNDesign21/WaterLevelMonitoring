@@ -51,8 +51,8 @@
 
     <div class="max-w-[2000px] mx-auto px-6 mt-6">
         <!-- HEADER: Consolidated WaterSense IT Command Center -->
-        <div class="mb-10 v-reveal-top" style="--delay: 0.2s">
-            <div class="glass-panel p-4 md:p-5 rounded-[2rem] bg-white/60 border border-white shadow-xl flex flex-col lg:flex-row items-center justify-between gap-6">
+        <div class="mb-10">
+            <div class="glass-panel p-4 md:p-5 rounded-[2rem] bg-white/60 border border-white shadow-xl flex flex-col lg:flex-row items-center justify-between gap-6 v-reveal-top" style="--delay: 0.2s">
                 <!-- Branding Section (Left) -->
                 <div class="flex items-center space-x-4">
                     <a href="{{ route('it.dashboard') }}" class="w-10 h-10 flex items-center justify-center bg-slate-900 text-white rounded-xl hover:bg-blue-600 transition-all shadow-lg shadow-slate-900/20 group">
@@ -465,14 +465,17 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
-                if(!document.body.classList.contains('loaded')) {
-                    document.body.classList.add('loaded');
-                }
+        function triggerReveal() {
+            if(!document.body.classList.contains('loaded')) {
+                console.log('[SENTINEL-SYSTEM] Triggering User HQ Reveal...');
+                document.body.classList.add('loaded');
                 initAccessTrendChart();
-            }, 300); // 300ms delay for desktop eye-sync
-        });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', triggerReveal);
+        window.addEventListener('load', triggerReveal);
+        setTimeout(triggerReveal, 3000); // EMERGENCY FAIL-SAFE
 
         function initAccessTrendChart() {
             const chartDom = document.getElementById('accessTrendChart');
