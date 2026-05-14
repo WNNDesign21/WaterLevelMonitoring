@@ -29,7 +29,7 @@ Route::middleware(['auth'])->group(function () {
     
     // Force Password Change Routes
     Route::get('/auth/change-password', [AuthController::class, 'showChangePassword'])->name('password.change');
-    Route::post('/auth/change-password', [AuthController::class, 'password.update'])->name('password.update');
+    Route::post('/auth/change-password', [AuthController::class, 'changePassword'])->name('password.change');
 });
 
 // Public Dashboard (Guest Access) - Under Lockdown Protection
