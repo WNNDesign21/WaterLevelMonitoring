@@ -44,16 +44,19 @@
                 </form>
             </div>
             @else
-            <!-- Sleek Hybrid Auth Portal -->
-            <div class="flex items-center space-x-1 pr-2 md:pr-4 border-r border-slate-200">
-                <div class="flex items-center bg-slate-100/80 backdrop-blur-md p-1 rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md transition-all duration-500 group/auth relative overflow-hidden">
-                    <a href="{{ route('login') }}" class="relative z-10 px-3 md:px-4 py-1.5 md:py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-[0.1em] text-slate-500 hover:text-blue-600 hover:bg-white transition-all duration-300">
+            <!-- Luxury Global Auth Portal -->
+            <div class="flex items-center space-x-2 pr-2 md:pr-4 border-r border-slate-200/60">
+                <div class="flex items-center p-1 bg-white/40 backdrop-blur-xl border border-white/80 rounded-2xl shadow-xl shadow-blue-900/5 group/auth-hub">
+                    <a href="{{ route('login') }}" class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:text-blue-600 hover:bg-white/80 transition-all duration-500 flex items-center">
+                        <i class="fa-solid fa-user-lock mr-2 opacity-40"></i>
                         Login
                     </a>
-                    <div class="relative z-10 w-[1px] h-3 bg-slate-200/80 mx-1"></div>
-                    <a href="{{ route('register') }}" class="relative z-10 px-3 md:px-5 py-1.5 md:py-2 rounded-xl bg-slate-900 text-white text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-slate-900/10 hover:bg-blue-600 transition-all duration-500 flex items-center group/btn">
-                        <i class="fa-solid fa-shield-halved mr-1 md:mr-2 text-[8px] md:text-[9px] opacity-70 group-hover/btn:rotate-12 transition-transform"></i>
-                        <span class="hidden xs:inline">Daftar</span>
+                    <a href="{{ route('register') }}" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-blue-500/30 hover:shadow-cyan-400/40 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-500 flex items-center group/reg-btn">
+                        <div class="relative flex items-center">
+                            <i class="fa-solid fa-id-card-clip mr-2 text-[11px] group-hover/reg-btn:rotate-12 transition-transform"></i>
+                            <span>Daftar</span>
+                            <div class="absolute -top-1 -right-1 w-2 h-2 bg-white rounded-full animate-ping opacity-20"></div>
+                        </div>
                     </a>
                 </div>
             </div>
