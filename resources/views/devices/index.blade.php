@@ -151,9 +151,9 @@
         </div>
         
         <!-- GIS ASSET LOCATOR (NEW) -->
-        <div class="v-reveal-right delay-5 mb-10">
+        <div class="v-reveal-right delay-3 mb-10">
             <div class="glass-panel p-2 rounded-[2.5rem] bg-white border border-white shadow-2xl overflow-hidden relative" style="height: 400px;">
-                <div id="master-map" class="w-full h-full rounded-[2.2rem] z-10"></div>
+                <div id="master-map" class="w-full h-full rounded-[2.2rem] z-10 opacity-0 transition-opacity duration-1000"></div>
                 
                 <!-- Map Legend -->
                 <div class="absolute bottom-6 left-6 z-[1000] bg-white/95 backdrop-blur-md border border-slate-200 p-4 rounded-2xl shadow-xl">
@@ -191,7 +191,7 @@
         <!-- Advanced Device Matrix (Light Mode) -->
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
             @foreach($devices as $index => $device)
-            <div class="v-reveal-bottom delay-{{ ($index % 5) + 6 }} group relative bg-white hover:bg-slate-50 border border-slate-200 hover:border-cyan-500/50 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 transition-all duration-500 shadow-md hover:shadow-2xl hover:shadow-cyan-500/10 overflow-hidden">
+            <div class="v-reveal-bottom delay-{{ ($index % 5) + 5 }} group relative bg-white hover:bg-slate-50 border border-slate-200 hover:border-cyan-500/50 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 transition-all duration-500 shadow-md hover:shadow-2xl hover:shadow-cyan-500/10 overflow-hidden">
                 
                 <!-- Status Badge -->
                 <div class="absolute top-6 md:top-8 right-6 md:right-8 flex items-center space-x-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
@@ -456,7 +456,17 @@
 
         // Initialize on load
         document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(initMasterMap, 800);
+            // Match delay-3 (0.8s)
+            setTimeout(() => {
+                initMasterMap();
+                const mapEl = document.getElementById('master-map');
+                if(mapEl) mapEl.style.opacity = '1';
+                
+                // Force size recalculation after animation finishes
+                setTimeout(() => {
+                    if(map) map.invalidateSize();
+                }, 1000);
+            }, 800);
         });
     </script>
 </body>
