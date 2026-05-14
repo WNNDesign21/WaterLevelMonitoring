@@ -20,8 +20,12 @@
         0% { opacity: 0; transform: translateY(-100px); filter: blur(20px); }
         100% { opacity: 1; transform: translateY(0); filter: blur(0); }
     }
+    @keyframes revealScale {
+        0% { opacity: 0; transform: scale(0.9); filter: blur(20px); }
+        100% { opacity: 1; transform: scale(1); filter: blur(0); }
+    }
 
-    .v-reveal-left, .v-reveal-right, .v-reveal-bottom, .v-reveal-top {
+    .v-reveal-left, .v-reveal-right, .v-reveal-bottom, .v-reveal-top, .v-reveal-scale {
         opacity: 0;
         animation-duration: 1.8s;
         animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -33,6 +37,7 @@
     body.loaded .v-reveal-right { animation-name: revealFromRight; }
     body.loaded .v-reveal-bottom { animation-name: revealFromBottom; }
     body.loaded .v-reveal-top { animation-name: revealFromTop; }
+    body.loaded .v-reveal-scale { animation-name: revealScale; }
 
     /* Precise Staggered Delays - 0.3s Interval for Master Control */
     body.loaded .delay-1 { animation-delay: 0.2s !important; }
@@ -146,7 +151,7 @@
         </div>
         
         <!-- GIS ASSET LOCATOR (NEW) -->
-        <div class="v-reveal-bottom delay-4 mb-10">
+        <div class="v-reveal-right delay-5 mb-10">
             <div class="glass-panel p-2 rounded-[2.5rem] bg-white border border-white shadow-2xl overflow-hidden relative" style="height: 400px;">
                 <div id="master-map" class="w-full h-full rounded-[2.2rem] z-10"></div>
                 
@@ -186,7 +191,7 @@
         <!-- Advanced Device Matrix (Light Mode) -->
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
             @foreach($devices as $index => $device)
-            <div class="v-reveal-bottom delay-{{ ($index % 5) + 4 }} group relative bg-white hover:bg-slate-50 border border-slate-200 hover:border-cyan-500/50 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 transition-all duration-500 shadow-md hover:shadow-2xl hover:shadow-cyan-500/10 overflow-hidden">
+            <div class="v-reveal-bottom delay-{{ ($index % 5) + 6 }} group relative bg-white hover:bg-slate-50 border border-slate-200 hover:border-cyan-500/50 rounded-[2rem] md:rounded-[2.5rem] p-6 md:p-8 transition-all duration-500 shadow-md hover:shadow-2xl hover:shadow-cyan-500/10 overflow-hidden">
                 
                 <!-- Status Badge -->
                 <div class="absolute top-6 md:top-8 right-6 md:right-8 flex items-center space-x-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
