@@ -32,6 +32,7 @@ dependencies:
   syncfusion_flutter_datepicker: ^25.1.37
   google_sign_in: 6.2.1
   app_links: ^6.3.2
+  firebase_core: ^4.9.0
 
 dev_dependencies:
   flutter_test:
@@ -49,4 +50,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/sounds/
     - .env

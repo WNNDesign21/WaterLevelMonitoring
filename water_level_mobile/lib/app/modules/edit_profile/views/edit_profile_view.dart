@@ -57,13 +57,6 @@ class EditProfileView extends GetView<EditProfileController> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF0F172A).withOpacity(0.05),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(18),
@@ -102,13 +95,6 @@ class EditProfileView extends GetView<EditProfileController> {
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.9),
                             borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 10,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
                           ),
                           child: Text(
                             'Ketuk peta untuk geser PIN',
@@ -128,7 +114,7 @@ class EditProfileView extends GetView<EditProfileController> {
                         onPressed: () => controller.getCurrentLocation(),
                         backgroundColor: Colors.white,
                         foregroundColor: const Color(0xFF2563EB),
-                        elevation: 2,
+                        elevation: 0,
                         child: const Icon(Icons.my_location_rounded),
                       ),
                     ),
@@ -148,6 +134,8 @@ class EditProfileView extends GetView<EditProfileController> {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   elevation: 0,
+                  shadowColor: Colors.transparent,
+                  surfaceTintColor: Colors.transparent,
                 ),
                 child: controller.isLoading.value
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))

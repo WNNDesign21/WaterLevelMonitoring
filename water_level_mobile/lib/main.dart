@@ -12,9 +12,16 @@ import 'app/data/providers/api_provider.dart';
 import 'app/data/providers/weather_provider.dart';
 import 'app/services/notification_service.dart';
 import 'app/data/services/deep_link_service.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   
   // Initialize Deep Link Service early
   await Get.putAsync(() => DeepLinkService().init());

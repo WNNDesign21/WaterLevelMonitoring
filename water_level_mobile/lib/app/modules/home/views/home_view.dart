@@ -614,10 +614,10 @@ class _HomeViewState extends State<HomeView> {
               Text(
                 'PEMANTAUAN REAL-TIME',
                 style: GoogleFonts.inter(
-                  fontSize: 8.5,
+                  fontSize: 11,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.accent.withValues(alpha: 0.8),
-                  letterSpacing: 1.2,
+                  color: context.textPrimary,
+                  letterSpacing: 0.5,
                 ),
               ),
               const Spacer(),
@@ -794,10 +794,10 @@ class _HomeViewState extends State<HomeView> {
             child: Text(
               'ANALISIS REAL-TIME',
               style: GoogleFonts.inter(
-                fontSize: 8.5,
+                fontSize: 11,
                 fontWeight: FontWeight.w800,
-                color: AppColors.accent.withValues(alpha: 0.8),
-                letterSpacing: 1.2,
+                color: context.textPrimary,
+                letterSpacing: 0.5,
               ),
             ),
           ),
@@ -983,10 +983,10 @@ class _HomeViewState extends State<HomeView> {
             child: Text(
               'LOKASI PERANGKAT',
               style: GoogleFonts.inter(
-                fontSize: 8.5,
+                fontSize: 11,
                 fontWeight: FontWeight.w800,
-                color: AppColors.accent.withValues(alpha: 0.8),
-                letterSpacing: 1.2,
+                color: context.textPrimary,
+                letterSpacing: 0.5,
               ),
             ),
           ),
@@ -1178,10 +1178,10 @@ class _HomeViewState extends State<HomeView> {
                   Text(
                     'KETINGGIAN AIR (TMA)',
                     style: GoogleFonts.inter(
-                      fontSize: 10,
+                      fontSize: 9,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.accent,
-                      letterSpacing: 1.2,
+                      color: context.textMuted,
+                      letterSpacing: 1.0,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -1226,7 +1226,7 @@ class _HomeViewState extends State<HomeView> {
           Text(
             'TREN 24 JAM TERAKHIR',
             style: GoogleFonts.inter(
-              fontSize: 8.5,
+              fontSize: 9,
               fontWeight: FontWeight.w800,
               color: context.textMuted,
               letterSpacing: 1.0,
@@ -1262,10 +1262,10 @@ class _HomeViewState extends State<HomeView> {
                       Text(
                         'CUACA LOKASI',
                         style: GoogleFonts.inter(
-                          fontSize: 8.5,
+                          fontSize: 9,
                           fontWeight: FontWeight.w800,
                           color: context.textMuted,
-                          letterSpacing: 0.5,
+                          letterSpacing: 1.0,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -1307,10 +1307,10 @@ class _HomeViewState extends State<HomeView> {
                       Text(
                         'SINYAL',
                         style: GoogleFonts.inter(
-                          fontSize: 8.5,
+                          fontSize: 9,
                           fontWeight: FontWeight.w800,
                           color: context.textMuted,
-                          letterSpacing: 0.5,
+                          letterSpacing: 1.0,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -1356,10 +1356,10 @@ class _HomeViewState extends State<HomeView> {
                       Text(
                         'UPDATE',
                         style: GoogleFonts.inter(
-                          fontSize: 8.5,
+                          fontSize: 9,
                           fontWeight: FontWeight.w800,
                           color: context.textMuted,
-                          letterSpacing: 0.5,
+                          letterSpacing: 1.0,
                         ),
                       ),
                       const SizedBox(height: 8),

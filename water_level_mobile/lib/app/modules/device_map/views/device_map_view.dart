@@ -5,6 +5,8 @@ import 'package:latlong2/latlong.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../routes/app_pages.dart';
+import '../../home/controllers/home_controller.dart';
 import '../controllers/device_map_controller.dart';
 
 class DeviceMapView extends GetView<DeviceMapController> {
@@ -41,7 +43,7 @@ class DeviceMapView extends GetView<DeviceMapController> {
                     userAgentPackageName: 'com.example.water_level_mobile',
                   ),
                   MarkerLayer(
-                    markers: controller.filteredDevices.map((device) {
+                    markers: List<Marker>.from(controller.filteredDevices.map((device) {
                       final lat = double.tryParse(device['latitude']?.toString() ?? '0') ?? 0.0;
                       final lng = double.tryParse(device['longitude']?.toString() ?? '0') ?? 0.0;
                       final isSelected = controller.selectedDevice.value?['slug'] == device['slug'];
@@ -52,64 +54,89 @@ class DeviceMapView extends GetView<DeviceMapController> {
                         point: LatLng(lat, lng),
                         width: 120,
                         height: 120,
+                        alignment: Alignment.center,
                         child: GestureDetector(
                           onTap: () {
                             controller.selectDevice(device);
                             controller.isSearchFocused.value = false;
                             FocusScope.of(context).unfocus();
                           },
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
+                        child: SizedBox(
+                          width: 120,
+                          height: 120,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            alignment: Alignment.center,
                             children: [
-                              // Pulse centered only on Icon
-                              Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  if (isSelected)
-                                    _PulseAnimation(color: statusColor),
-                                  AnimatedContainer(
-                                    duration: const Duration(milliseconds: 300),
-                                    padding: EdgeInsets.all(isSelected ? 6 : 4),
-                                    decoration: BoxDecoration(
-                                      color: isSelected ? statusColor : context.bgCard,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: isSelected ? Colors.white : statusColor.withValues(alpha: 0.8),
-                                        width: 2,
+                              // Pulse + Icon Container (Always centered at 60,60)
+                              Center(
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    if (isSelected) _PulseAnimation(color: statusColor),
+                                    // Icon Container
+                                    AnimatedContainer(
+                                      duration: const Duration(milliseconds: 300),
+                                      padding: EdgeInsets.all(isSelected ? 6 : 4),
+                                      decoration: BoxDecoration(
+                                        color: isSelected ? statusColor : context.bgCard,
+                                        shape: BoxShape.circle,
+                                        boxShadow: isSelected ? [
+                                          BoxShadow(
+                                            color: statusColor.withValues(alpha: 0.5),
+                                            blurRadius: 10,
+                                            spreadRadius: 2
+                                          )
+                                        ] : null,
+                                        border: Border.all(
+                                          color: isSelected ? Colors.white : statusColor.withValues(alpha: 0.8),
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        Icons.sensors_rounded,
+                                        color: isSelected ? Colors.white : statusColor,
+                                        size: isSelected ? 22 : 18,
                                       ),
                                     ),
-                                    child: Icon(
-                                      Icons.sensors_rounded,
-                                      color: isSelected ? Colors.white : statusColor,
-                                      size: isSelected ? 22 : 18,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.8),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: isSelected ? Border.all(color: Colors.white, width: 1) : null,
+                                  ],
                                 ),
-                                child: Text(
-                                  device['name'] ?? '',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.inter(
-                                    color: Colors.white,
-                                    fontSize: 9,
-                                    fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+                              ),
+                              
+                              // Device Label (Fixed position relative to the 120x120 box)
+                              Positioned(
+                                bottom: 15, // Fixed distance from bottom of 120x120
+                                left: 0,
+                                right: 0,
+                                child: Center(
+                                  child: Container(
+                                    constraints: const BoxConstraints(maxWidth: 110),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(alpha: 0.8),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: isSelected ? Border.all(color: Colors.white, width: 1) : null,
+                                    ),
+                                    child: Text(
+                                      device['name'] ?? '',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.inter(
+                                        color: Colors.white,
+                                        fontSize: 9,
+                                        fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
                             ],
                           ),
                         ),
+                        ),
                       );
-                    }).toList(),
+                    })),
                   ),
                 ],
               )),
@@ -354,9 +381,14 @@ class DeviceMapView extends GetView<DeviceMapController> {
                           children: [
                             Expanded(
                               child: ElevatedButton.icon(
-                                onPressed: () => Get.back(),
-                                icon: const Icon(Icons.visibility_rounded, size: 18),
-                                label: const Text('DETAIL'),
+                                onPressed: () {
+                                  // Select the device in HomeController so Analysis module loads it
+                                  final homeController = Get.find<HomeController>();
+                                  homeController.onDeviceSelected(device);
+                                  Get.toNamed(Routes.ANALYSIS);
+                                },
+                                icon: const Icon(Icons.analytics_rounded, size: 18),
+                                label: const Text('ANALISIS'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: context.bgPrimary,
                                   foregroundColor: context.textPrimary,

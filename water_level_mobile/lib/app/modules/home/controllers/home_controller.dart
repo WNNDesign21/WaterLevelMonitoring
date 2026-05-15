@@ -22,6 +22,8 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
   final WeatherProvider _weatherProvider = Get.find<WeatherProvider>();
   final _storage = GetStorage();
   final AudioPlayer _audioPlayer = AudioPlayer();
+  Timer? _siaga2Timer;
+  Timer? _siaga3Timer;
 
   // ── Loading & Network ───────────────────────────────────────────
   var isLoading = true.obs;
@@ -158,6 +160,8 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
     _snoozeTimer?.cancel();
     _statusDebounceTimer?.cancel();
     _audioPlayer.dispose();
+    _siaga2Timer?.cancel();
+    _siaga3Timer?.cancel();
     super.onClose();
   }
 
@@ -493,30 +497,15 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
     switch (statusSiaga.value) {
       case 'SIAGA 1':
         await NotificationService.notifySiaga1();
-        _startSiaga1Alarm();
+        await _startSiaga1Alarm();
         break;
       case 'SIAGA 2':
         await NotificationService.notifySiaga2();
-        _audioPlayer.play(UrlSource(
-            'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3'));
-        Get.snackbar(
-          '⚠️ SIAGA 2',
-          'Tinggi air mendekati batas bantaran. Pantau situasi!',
-          backgroundColor: const Color(0xFFF59E0B),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 5),
-        );
+        _startSiaga2PeriodicAlert();
         break;
       case 'SIAGA 3':
         await NotificationService.notifySiaga3();
-        if (!kIsWeb) FlutterRingtonePlayer().playNotification();
-        Get.snackbar(
-          '📡 SIAGA 3',
-          'Air naik signifikan. Status dimonitor aktif.',
-          backgroundColor: const Color(0xFF3B82F6),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 4),
-        );
+        _startSiaga3PeriodicAlert();
         break;
       default:
         _stopAllAlarms();
@@ -525,7 +514,7 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
     // Vibration
     if (!kIsWeb && await Vibration.hasVibrator()) {
       if (statusSiaga.value == 'SIAGA 1') {
-        Vibration.vibrate(pattern: [500, 200, 500, 200, 1000]);
+        Vibration.vibrate(pattern: [500, 200, 500, 200, 1000], repeat: 0);
       } else if (statusSiaga.value == 'SIAGA 2') {
         Vibration.vibrate(pattern: [300, 200, 300]);
       } else if (statusSiaga.value == 'SIAGA 3') {
@@ -534,10 +523,19 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
     }
   }
 
-  void _startSiaga1Alarm() {
-    _audioPlayer.setReleaseMode(ReleaseMode.loop);
-    _audioPlayer.play(UrlSource(
-        'https://assets.mixkit.co/active_storage/sfx/950/950-preview.mp3'));
+  Future<void> _startSiaga1Alarm() async {
+    try {
+      if (kIsWeb) {
+        _audioPlayer.setReleaseMode(ReleaseMode.loop).then((_) {
+          _audioPlayer.play(AssetSource('sounds/alarm_high.mp3'));
+        });
+      } else {
+        await _audioPlayer.setReleaseMode(ReleaseMode.loop);
+        await _audioPlayer.play(AssetSource('sounds/alarm_high.mp3'));
+      }
+    } catch (e) {
+      print("Audio Error (Siaga 1): $e");
+    }
     _showEvacuationDialog();
   }
 
@@ -615,9 +613,90 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
 
   void _stopAllAlarms() {
     _audioPlayer.stop();
+    _siaga2Timer?.cancel();
+    _siaga3Timer?.cancel();
     if (!kIsWeb) {
       FlutterRingtonePlayer().stop();
       Vibration.cancel();
+    }
+  }
+
+  void _startSiaga2PeriodicAlert() {
+    _siaga2Timer?.cancel();
+    _playSiaga2Sound(); // Initial play
+    // Repeat every 2 seconds
+    _siaga2Timer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (statusSiaga.value == 'SIAGA 2') {
+        _playSiaga2Sound();
+      } else {
+        timer.cancel();
+      }
+    });
+
+    Get.snackbar(
+      '⚠️ SIAGA 2',
+      'Tinggi air mendekati batas bantaran. Pantau situasi!',
+      backgroundColor: const Color(0xFFF59E0B),
+      colorText: Colors.white,
+      duration: const Duration(seconds: 5),
+    );
+  }
+
+  void _playSiaga2Sound() async {
+    try {
+      if (kIsWeb) {
+        // On Web, sometimes await play() or setReleaseMode can cause issues with dart:io stubs
+        _audioPlayer.setReleaseMode(ReleaseMode.release).then((_) {
+          _audioPlayer.play(AssetSource('sounds/notification_warning.mp3'));
+        });
+      } else {
+        await _audioPlayer.setReleaseMode(ReleaseMode.release);
+        await _audioPlayer.play(AssetSource('sounds/notification_warning.mp3'));
+      }
+    } catch (e) {
+      print("Audio Error (Siaga 2): $e");
+    }
+    
+    if (!kIsWeb && await Vibration.hasVibrator()) {
+      Vibration.vibrate(pattern: [300, 200, 300]);
+    }
+  }
+
+  void _startSiaga3PeriodicAlert() {
+    _siaga3Timer?.cancel();
+    _playSiaga3Sound(); // Initial play
+    // Repeat every 5 minutes (300 seconds)
+    _siaga3Timer = Timer.periodic(const Duration(minutes: 5), (timer) {
+      if (statusSiaga.value == 'SIAGA 3') {
+        _playSiaga3Sound();
+      } else {
+        timer.cancel();
+      }
+    });
+
+    Get.snackbar(
+      '📡 SIAGA 3',
+      'Air naik signifikan. Status dimonitor aktif.',
+      backgroundColor: const Color(0xFF3B82F6),
+      colorText: Colors.white,
+      duration: const Duration(seconds: 4),
+    );
+  }
+
+  void _playSiaga3Sound() async {
+    try {
+      if (!kIsWeb) {
+        FlutterRingtonePlayer().playNotification();
+        if (await Vibration.hasVibrator()) {
+          Vibration.vibrate(duration: 400);
+        }
+      } else {
+        // Fallback or silent for web if needed, or use a short sound
+        await _audioPlayer.setReleaseMode(ReleaseMode.release);
+        await _audioPlayer.play(AssetSource('sounds/notification_warning.mp3'));
+      }
+    } catch (e) {
+      print("Audio Error (Siaga 3): $e");
     }
   }
 

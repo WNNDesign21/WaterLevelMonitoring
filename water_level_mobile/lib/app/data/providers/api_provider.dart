@@ -61,7 +61,7 @@ class ApiProvider {
       
       final uri = Uri.parse(url);
       print('Fetching History: $uri');
-      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
       if (response.statusCode == 200) {
         return json.decode(response.body);
       }
@@ -91,12 +91,17 @@ class ApiProvider {
   /// Login to account
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
-      final uri = Uri.parse('$baseUrl/login');
+      final url = '$baseUrl/login';
+      print('Calling Login: $url');
+      final uri = Uri.parse(url);
       final response = await http.post(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'WaterSense/2.0.0 (Android)',
+        },
         body: json.encode({'email': email, 'password': password}),
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 15));
       
       return {
         'statusCode': response.statusCode,

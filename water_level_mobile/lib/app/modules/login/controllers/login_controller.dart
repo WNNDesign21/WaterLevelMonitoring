@@ -12,8 +12,11 @@ class LoginController extends GetxController {
 
   // Instance of GoogleSignIn
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId:
-        '449684741383-6unjvhmoumbcj6mlhgjkos2jle986hbp.apps.googleusercontent.com',
+    clientId: GetPlatform.isAndroid
+        ? '449684741383-6ftjo6ng8dlocpvce35qi0stef40vb5l.apps.googleusercontent.com'
+        : GetPlatform.isIOS
+            ? '449684741383-cugt5eh4olcek4setmce1p085cvj4bu5.apps.googleusercontent.com'
+            : '449684741383-99miv52mmk68lq9cfcgo8mgt4oljemd1.apps.googleusercontent.com', // Web Client ID
   );
 
   final emailController = TextEditingController();

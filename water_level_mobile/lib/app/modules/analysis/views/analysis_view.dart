@@ -141,10 +141,10 @@ class AnalysisView extends GetView<AnalysisController> {
                   Text(
                     'HISTORY ANALISIS',
                     style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.accent,
-                      letterSpacing: 1.2,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: context.textPrimary,
+                      letterSpacing: 0.5,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -637,6 +637,8 @@ class AnalysisView extends GetView<AnalysisController> {
               child: LineChart(
                 LineChartData(
                   lineTouchData: LineTouchData(
+                    touchSpotThreshold: 20,
+                    handleBuiltInTouches: true,
                     getTouchedSpotIndicator:
                         (LineChartBarData barData, List<int> spotIndexes) {
                       return spotIndexes.map((index) {
@@ -675,8 +677,8 @@ class AnalysisView extends GetView<AnalysisController> {
                           String format = 'dd MMM yyyy';
                           if (period == 'Harian') {
                             format = 'HH:mm';
-                          } else if (period == 'Tahunan') {
-                            format = 'MMM yyyy';
+                          } else if (period == 'Mingguan') {
+                            format = 'dd MMM, HH:mm';
                           }
                           
                           final timeStr = DateFormat(format).format(time);
@@ -726,9 +728,8 @@ class AnalysisView extends GetView<AnalysisController> {
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 32,
-                        interval:
-                            math.max(1.0, (spots.length / 12).floorToDouble()),
+                        reservedSize: 48,
+                        interval: 1,
                         getTitlesWidget: (value, meta) {
                           final index = value.toInt();
                           if (index < 0 ||
@@ -747,16 +748,18 @@ class AnalysisView extends GetView<AnalysisController> {
                           } else if (period == 'Bulanan' ||
                               (period == 'Custom' &&
                                   controller.historyData.length < 100)) {
-                            label = DateFormat('dd MMM').format(time);
+                            label = DateFormat('dd/MM').format(time);
                           } else if (period == 'Tahunan') {
-                            label = DateFormat('MMM yy').format(time);
+                            label = DateFormat('dd/MM/yy').format(time);
                           } else {
                             // Default for long custom range
                             label = DateFormat('dd/MM').format(time);
                           }
 
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 10),
+                          return SideTitleWidget(
+                            meta: meta,
+                            space: 10,
+                            angle: (period == 'Mingguan' || period == 'Bulanan' || period == 'Tahunan' || period == 'Custom') ? -0.8 : 0,
                             child: Text(
                               label,
                               style: GoogleFonts.inter(
@@ -783,7 +786,7 @@ class AnalysisView extends GetView<AnalysisController> {
                         colors: [AppColors.accent, Color(0xFF6366F1)],
                       ),
                       dotData: FlDotData(
-                        show: spots.length < 50,
+                        show: spots.length < 50 || controller.selectedPeriod.value == 'Tahunan',
                         getDotPainter: (spot, percent, barData, index) =>
                             FlDotCirclePainter(
                           radius: 2,
@@ -834,15 +837,18 @@ class AnalysisView extends GetView<AnalysisController> {
                   letterSpacing: 0.5,
                 ),
               ),
-              GestureDetector(
+              InkWell(
                 onTap: () => Get.toNamed(Routes.HISTORY_LOG),
-                behavior: HitTestBehavior.opaque,
-                child: Text(
-                  'Lihat Semua',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.accent,
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Text(
+                    'Lihat Semua',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.accent,
+                    ),
                   ),
                 ),
               ),

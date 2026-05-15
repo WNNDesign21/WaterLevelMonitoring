@@ -226,13 +226,6 @@ class RegisterView extends GetView<RegisterController> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(18),
@@ -271,13 +264,6 @@ class RegisterView extends GetView<RegisterController> {
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.9),
                           borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
                         ),
                         child: Text(
                           'Ketuk peta untuk geser PIN',
@@ -297,7 +283,7 @@ class RegisterView extends GetView<RegisterController> {
                       onPressed: () => controller.getCurrentLocation(),
                       backgroundColor: Colors.white,
                       foregroundColor: const Color(0xFF2563EB),
-                      elevation: 2,
+                      elevation: 0,
                       child: const Icon(Icons.my_location_rounded),
                     ),
                   ),
@@ -429,6 +415,7 @@ class RegisterView extends GetView<RegisterController> {
               foregroundColor: Colors.white,
               elevation: 0,
               shadowColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
