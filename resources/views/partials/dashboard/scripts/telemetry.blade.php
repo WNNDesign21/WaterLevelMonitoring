@@ -165,4 +165,7 @@
             .then(res => { if (res.status === 'success') updateDashboard(res); })
             .catch(err => console.warn('Polling error:', err));
     }
+
+    // --- AUTOMATIC TELEMETRY REFRESH CYCLE (3 SECONDS) ---
+    setInterval(pollTelemetry, 3000);
 </script>
