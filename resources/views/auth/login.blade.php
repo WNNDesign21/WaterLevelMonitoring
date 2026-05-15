@@ -18,10 +18,10 @@
                 </div>
                 <div>
                     <h1 class="text-4xl font-black text-slate-800 tracking-tighter leading-tight">
-                        Penjaga <span class="text-blue-600">Digital</span> <br>Sungai Citarum.
+                        Water <span class="text-blue-600">Sense</span> <br>Pemantauan Sungai Secara Digital.
                     </h1>
                     <p class="mt-6 text-slate-500 font-bold text-xs leading-relaxed uppercase tracking-widest opacity-80">
-                        Sistem informasi hidrologi cerdas untuk keselamatan warga Karawang.
+                        Sistem informasi hidrologi cerdas untuk keselamatan warga.
                     </p>
                 </div>
                 <div class="flex flex-col space-y-3 pt-6">

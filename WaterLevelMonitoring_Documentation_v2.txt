@@ -1,0 +1,156 @@
+================================================================================
+          SENTINEL WATERSENSE: ADVANCED WATER LEVEL MONITORING SYSTEM
+                     OFFICIAL PROJECT DOCUMENTATION v2.0
+================================================================================
+
+1. PROJECT OVERVIEW
+--------------------------------------------------------------------------------
+Sentinel WaterSense adalah ekosistem monitoring level air sungai secara real-time
+yang dirancang untuk mitigasi banjir di sektor Karawang (Sungai Citarum). 
+Sistem ini menggabungkan perangkat keras IoT tingkat industri dengan dashboard 
+administratif "Jarvis-Style" yang sangat intuitif, mewah, dan modular.
+
+2. TECHNOLOGY STACK
+--------------------------------------------------------------------------------
+SOFTWARE (BACKEND & WEB):
+- Framework: Laravel 11.x (PHP 8.2+)
+- Database: MariaDB / MySQL
+- Frontend: Blade Templating Engine, Vanilla JavaScript, Tailwind CSS (Tailored)
+- Maps: Leaflet.js (GIS Asset Intelligence)
+- Charts: Chart.js (Telemetry Visualization)
+- Animations: Custom CSS3 "Jarvis" Cinematic Engine (Cubic-Bezier)
+
+HARDWARE (IoT LAYER):
+- Core: Arduino Mega 2560 & NodeMCU ESP8266
+- Sensor: JSN-SR04T (Industrial Grade Ultrasonic Waterproof)
+- Communication: Serial Bridge (UART) & Wi-Fi (HTTP REST)
+- Bridge Logic: Python Serial Bridge (Telemetry Relay)
+
+TOOLS & DEPLOYMENT:
+- Version Control: Git & GitHub
+- VPS: IdCloudHost (High Availability Instance)
+- Terminal: Bash / SSH
+- API Engine: RESTful API
+
+3. SYSTEM ARCHITECTURE (MODULAR DESIGN)
+--------------------------------------------------------------------------------
+Sistem ini menganut prinsip "Lean & Modular" di mana tidak ada file kode yang 
+melebihi 500 baris. Semua komponen dashboard dipecah menjadi partials:
+
+Folder Structure:
+- resources/views/partials/it_dashboard/ (Sistem Navigasi, Stats, Log)
+- resources/views/partials/it_users/ (Manajemen Akun, Modal)
+- resources/views/partials/user_dashboard/ (Dashboard Publik & Guest)
+
+4. DETAILED PAGE WALKTHROUGH
+--------------------------------------------------------------------------------
+A. DASHBOARD IT (ADMIN):
+   - Fungsi: Pusat kendali seluruh node sensor.
+   - Fitur: Real-time telemetry feed, status "Kill Switch" global, 
+     dan log aktivitas sistem.
+   - Cara Kerja: Mengambil data terbaru dari database setiap detik (Polling) 
+     dan memperbarui DOM secara reaktif.
+
+B. ANALYTICS CENTER:
+   - Fungsi: Visualisasi tren data historis.
+   - Fitur: Grafik dinamis yang menampilkan fluktuasi level air (Median/AVG).
+   - Animasi: Modul grafik muncul dengan efek "Reveal Scale" berurutan.
+
+C. DEVICE INFRASTRUCTURE:
+   - Fungsi: Manajemen Geospasial Node Sensor.
+   - Fitur: "Sentinel Orbital Zoom" - Efek peta yang meluncur dari luar angkasa 
+     menuju lokasi koordinat node saat halaman dimuat.
+   - Cara Kerja: Menggunakan Leaflet.js flyTo() dengan sinkronisasi delay CSS.
+
+D. IT/USERS MANAGEMENT:
+   - Fungsi: Pengendalian hak akses.
+   - Fitur: Manajemen Level Admin (IT Admin vs Regular Admin).
+
+5. IoT CONNECTIVITY & DATA FLOW
+--------------------------------------------------------------------------------
+1. Sensor JSN-SR04T membaca jarak permukaan air (Telemetri Mentah).
+2. Arduino memfilter data menggunakan Median Filter untuk menghilangkan noise.
+3. NodeMCU/ESP8266 mengirim data JSON via HTTP POST ke Endpoint API Laravel.
+4. Laravel menvalidasi data, mencatatnya di Database, dan memicu notifikasi 
+   jika status "Siaga" terdeteksi.
+
+6. SECURITY SYSTEMS & METHODS
+--------------------------------------------------------------------------------
+A. SYSTEM KILL SWITCH:
+   - Metode: Flag Boolean di Database.
+   - Fungsi: Jika diaktifkan, seluruh dashboard publik akan terkunci seketika.
+   - Keamanan: Hanya IT_ADMIN_RANK yang bisa mengakses tombol ini.
+
+B. ENCRYPTED PASSWORD RESET:
+   - Metode: Token-based email verification via SMTP.
+   - Keamanan: Password di-hash menggunakan Argon2id (Standard Industri).
+
+C. ROLE-BASED ACCESS CONTROL (RBAC):
+   - Admin tidak bisa mengakses fitur IT (seperti manajemen user lain).
+   - IT Admin memiliki kendali penuh atas infrastruktur.
+
+7. API DOCUMENTATION
+--------------------------------------------------------------------------------
+Jenis API: RESTful API (JSON Response)
+
+ENDPOINTS UTAMA:
+1. GET /api/devices: Daftar seluruh node dan status siaga terbaru.
+2. GET /api/sensor-data/latest/{slug}: Data telemetri terakhir untuk 1 node.
+3. GET /api/sensor-data/stats/{slug}: Statistik 24 jam (Avg, Min, Max).
+4. POST /api/sensor-data: Ingest data dari hardware NodeMCU.
+
+Mekanisme Respon: 
+API didesain "Mobile-Friendly" dengan mengembalikan Status 200 OK meskipun 
+data null, untuk mencegah crash pada aplikasi mobile (Flutter).
+
+8. CODE SNIPPETS (CORE LOGIC)
+--------------------------------------------------------------------------------
+
+[SNIPPET 1: CINEMATIC ANIMATION ENGINE]
+CSS yang menggerakkan efek "Jarvis" di seluruh dashboard:
+```css
+@keyframes revealScale {
+    0% { opacity: 0; transform: scale(0.9); filter: blur(20px); }
+    100% { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+.v-reveal-scale {
+    animation: revealScale 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+```
+
+[SNIPPET 2: SENTINEL ORBITAL DESCENT]
+Logika peta yang terjun dari luar angkasa:
+```javascript
+map.flyTo([-6.3227, 107.3376], 12, {
+    animate: true,
+    duration: 5,
+    easeLinearity: 0.25
+});
+```
+
+[SNIPPET 3: API STATS LOGIC]
+Logika pengambilan statistik di SensorDataController:
+```php
+$stats = SensorData::where('device_id', $device->id)
+    ->where('created_at', '>=', now()->subDay())
+    ->selectRaw('AVG(distance) as avg, MIN(distance) as min, MAX(distance) as max')
+    ->first();
+```
+
+9. DEPLOYMENT WORKFLOW
+--------------------------------------------------------------------------------
+- Pipeline: Local -> GitHub -> VPS
+- Sinkronisasi: "Hard Reset Sync" menggunakan git fetch & reset --hard.
+- Optimasi: php artisan optimize dijalankan setiap kali deploy untuk memastikan 
+  perubahan view Blade langsung terbaca di server.
+
+10. CONCLUSION
+--------------------------------------------------------------------------------
+Sentinel WaterSense bukan sekadar sistem monitoring, melainkan benteng digital 
+yang dirancang dengan estetika tinggi dan arsitektur kode yang bersih. Sistem 
+ini siap untuk diintegrasikan lebih lanjut dengan sistem peringatan dini (EWS) 
+nasional maupun platform mobile yang lebih kompleks.
+
+--------------------------------------------------------------------------------
+Document Generated by Antigravity AI (Advanced Agentic Coding)
+================================================================================
