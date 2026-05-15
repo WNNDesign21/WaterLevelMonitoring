@@ -17,9 +17,9 @@ import '../../../data/providers/api_provider.dart';
 import '../../../data/providers/weather_provider.dart';
 import '../../../services/notification_service.dart';
 
-class HomeController extends GetxController {
-  final ApiProvider _apiProvider = ApiProvider();
-  final WeatherProvider _weatherProvider = WeatherProvider();
+class HomeController extends GetxController with GetSingleTickerProviderStateMixin {
+  final ApiProvider _apiProvider = Get.find<ApiProvider>();
+  final WeatherProvider _weatherProvider = Get.find<WeatherProvider>();
   final _storage = GetStorage();
   final AudioPlayer _audioPlayer = AudioPlayer();
 
@@ -39,6 +39,10 @@ class HomeController extends GetxController {
   var selectedDeviceLat = 0.0.obs;
   var selectedDeviceLng = 0.0.obs;
 
+  // ── User Data ────────────────────────────────────────────────────
+  var userName = 'GUEST'.obs;
+  var userEmail = ''.obs;
+
   // ── User Location & Weather ──────────────────────────────────────
   var userLat = 0.0.obs;
   var userLng = 0.0.obs;
@@ -54,6 +58,7 @@ class HomeController extends GetxController {
   var flowVelocity = 0.0.obs;
   var flowTrend = 0.obs;
   var sparklineData = <double>[].obs;
+  var sparklineTimestamps = <DateTime>[].obs;
   var _previousWaterLevel = 0.0;
   
   // ── Sensor Stats (24h) ──────────────────────────────────────────
@@ -66,8 +71,8 @@ class HomeController extends GetxController {
   var maxWaterLevel = 0.0.obs;
 
   // ── Status siaga ─────────────────────────────────────────────────
-  var statusSiaga = 'OFFLINE'.obs;
-  var statusColor = 0xFF64748B.obs; // slate/gray
+  var statusSiaga = 'MENYAMBUNG...'.obs;
+  var statusColor = 0xFF3B82F6.obs; // Blue for connecting
   var etaOverflow = '> 2 Jam'.obs;
   var distanceToGround = 0.0.obs;
   String _lastNotifiedStatus = '';
@@ -81,7 +86,7 @@ class HomeController extends GetxController {
   var weatherLoading = false.obs;
   var weatherTemp = 0.0.obs;
   var weatherDesc = ''.obs;
-  var weatherIcon = '🌡️'.obs;
+  var weatherIcon = ''.obs;
   var weatherCode = 0.obs;
   var weatherWindspeed = 0.0.obs;
   var weatherHumidity = 0.obs;
@@ -92,7 +97,7 @@ class HomeController extends GetxController {
   // ── Animation ──────────────────────────────────────────────────
   var wavePhase = 0.0.obs;
   final cityImg = Rxn<ui.Image>();
-  Timer? _animationTimer;
+  late AnimationController _waveController;
   Timer? _snoozeTimer;
   Timer? _dataTimer;
   Timer? _weatherTimer;
@@ -104,15 +109,27 @@ class HomeController extends GetxController {
     super.onInit();
     _loadCityImg();
     _loadSavedDevice();
+    _loadUser();
     fetchDevices();
     _initUserLocation();
+    
+    // Dengarkan perubahan storage secara langsung (khusus data user)
+    _storage.listenKey('user', (value) {
+      _loadUser();
+    });
+
     // Refresh sensor data every 5 sec
     _dataTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (selectedDeviceSlug.value.isNotEmpty) fetchSensorData();
     });
-    // Animation Ticker (approx 60fps)
-    _animationTimer = Timer.periodic(const Duration(milliseconds: 16), (_) {
-      wavePhase.value += 0.05;
+    // Animation Ticker (Smooth 60fps, synced with screen)
+    _waveController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+    
+    _waveController.addListener(() {
+      wavePhase.value = _waveController.value * 2 * 3.14159; // Full phase rotation
     });
 
     // Refresh weather every 10 min
@@ -135,7 +152,7 @@ class HomeController extends GetxController {
 
   @override
   void onClose() {
-    _animationTimer?.cancel();
+    _waveController.dispose();
     _dataTimer?.cancel();
     _weatherTimer?.cancel();
     _snoozeTimer?.cancel();
@@ -196,8 +213,30 @@ class HomeController extends GetxController {
     }
   }
 
+  void _loadUser() {
+    try {
+      final user = _storage.read('user');
+      if (user != null) {
+        final String fullName = (user['name'] ?? 'USER').toString();
+        // Ambil nama depan saja, capitalize
+        String firstName = fullName.split(' ')[0];
+        if (firstName.length > 12) firstName = firstName.substring(0, 12);
+        userName.value = firstName.toUpperCase();
+        userEmail.value = user['email'] ?? '';
+        debugPrint('DEBUG: Home User Loaded - ${userName.value}');
+      } else {
+        userName.value = 'GUEST';
+        userEmail.value = '';
+        debugPrint('DEBUG: Home User is GUEST');
+      }
+    } catch (e) {
+      userName.value = 'GUEST';
+      debugPrint('Error loading user: $e');
+    }
+  }
+
   Future<void> fetchDevices() async {
-    isLoading.value = true;
+    if (devices.isEmpty) isLoading.value = true;
     final list = await _apiProvider.fetchDevices();
     if (list.isNotEmpty) {
       devices.value = list;
@@ -216,6 +255,32 @@ class HomeController extends GetxController {
   }
 
   void _selectDevice(Map<String, dynamic> device) {
+    final newSlug = device['slug'] ?? '';
+    final isNewDevice = newSlug != selectedDeviceSlug.value;
+
+    // 1. Reset & Show skeleton only if it's a DIFFERENT device or first time
+    if (isNewDevice || sparklineData.isEmpty) {
+      isLoading.value = true;
+      sparklineData.clear();
+      _previousWaterLevel = 0.0;
+    }
+    _lastNotifiedStatus = ''; // Reset alert memory
+    _pendingStatus = '';
+    _statusDebounceTimer?.cancel();
+    _statusDebounceTimer = null;
+    _stopAllAlarms(); // Stop any active alarms from previous device
+
+    // Reset stats to 0 to avoid showing old device stats while loading
+    avgWaterLevel.value = 0.0;
+    minWaterLevel.value = 0.0;
+    maxWaterLevel.value = 0.0;
+    distance.value = 0.0;
+    waterLevel.value = 0.0;
+    statusSiaga.value = 'MENYAMBUNG...';
+    statusColor.value = 0xFF3B82F6;
+    _resetSensorData();
+
+    // 2. Set new device info
     selectedDeviceSlug.value = device['slug'] ?? '';
     selectedDeviceName.value = device['name'] ?? 'Node';
     selectedDeviceLocation.value = device['location'] ?? '';
@@ -223,8 +288,13 @@ class HomeController extends GetxController {
         double.tryParse(device['latitude']?.toString() ?? '0') ?? 0.0;
     selectedDeviceLng.value =
         double.tryParse(device['longitude']?.toString() ?? '0') ?? 0.0;
+    
+    // 3. Persist and Fetch
     _storage.write('selected_device_slug', selectedDeviceSlug.value);
+    
+    // Fetch immediately
     fetchSensorData();
+    fetchSensorStats();
     _fetchWeather();
   }
 
@@ -262,13 +332,13 @@ class HomeController extends GetxController {
         fetchSensorStats();
 
         // Heartbeat check (server time is UTC)
+        bool currentlyOnline = false;
         if (data['created_at'] != null) {
           final lastSeen = DateTime.parse(data['created_at']);
-          isOnline.value =
-              DateTime.now().toUtc().difference(lastSeen).inSeconds <= 30;
-        } else {
-          isOnline.value = false;
+          currentlyOnline = DateTime.now().toUtc().difference(lastSeen).inSeconds <= 30;
         }
+        
+        isOnline.value = currentlyOnline;
 
         // Update calibration config from API
         if (response['config'] != null) {
@@ -283,42 +353,61 @@ class HomeController extends GetxController {
                   100.0;
         }
 
-        // Compute derived values
-        waterLevel.value = elevationMdpl.value - (distance.value / 100.0);
-        distanceToGround.value = sensorToBank.value - (distance.value);
+        // Compute derived values ONLY if online, otherwise reset/freeze
+        if (currentlyOnline) {
+          waterLevel.value = elevationMdpl.value - (distance.value / 100.0);
+          distanceToGround.value = sensorToBank.value - (distance.value);
 
-        if (_previousWaterLevel > 0) {
-          final delta = waterLevel.value - _previousWaterLevel;
-          flowVelocity.value = delta.abs(); // in meters (consistent with web)
-          if (delta > 0.005) {
-            flowTrend.value = 1;
-          } else if (delta < -0.005) {
-            flowTrend.value = -1;
-          } else {
-            flowTrend.value = 0;
+          if (_previousWaterLevel > 0) {
+            final delta = waterLevel.value - _previousWaterLevel;
+            flowVelocity.value = delta.abs(); 
+            if (delta > 0.005) {
+              flowTrend.value = 1;
+            } else if (delta < -0.005) {
+              flowTrend.value = -1;
+            } else {
+              flowTrend.value = 0;
+            }
           }
-        }
-        _previousWaterLevel = waterLevel.value;
+          _previousWaterLevel = waterLevel.value;
 
-        // Sparkline update
-        sparklineData.add(waterLevel.value);
-        if (sparklineData.length > 40) {
-          sparklineData.removeAt(0);
+          // Sparkline update
+          sparklineData.add(waterLevel.value);
+          sparklineTimestamps.add(DateTime.now());
+          if (sparklineData.length > 40) {
+            sparklineData.removeAt(0);
+            sparklineTimestamps.removeAt(0);
+          }
+        } else {
+          // If OFFLINE: Reset activity indicators
+          _resetSensorData();
+          // We don't add to sparkline to keep the graph "frozen"
         }
 
         _updateStatusSiaga();
         _updateAiEta();
       } else {
         isOnline.value = false;
+        _resetSensorData();
         _updateStatusSiaga();
+        _updateAiEta();
       }
     } catch (_) {
       isOnline.value = false;
+      _resetSensorData();
       _updateStatusSiaga();
+      _updateAiEta();
     } finally {
       isLoading.value = false;
       isRefreshing.value = false;
     }
+  }
+
+  void _resetSensorData() {
+    flowVelocity.value = 0.0;
+    flowTrend.value = 0;
+    distanceToGround.value = -999.0;
+    etaOverflow.value = '---';
   }
 
   Future<void> onManualRefresh() async {
@@ -362,7 +451,17 @@ class HomeController extends GetxController {
     // Always update color for immediate UI feedback on the gauge
     statusColor.value = newColor;
 
-    // If status returns to current confirmed status, cancel pending changes
+    // 1. INSTANT UPDATE: If currently OFFLINE, CONNECTING or switching TO OFFLINE, update immediately
+    if (statusSiaga.value == 'OFFLINE' || statusSiaga.value == 'MENYAMBUNG...' || !isOnline.value) {
+      _statusDebounceTimer?.cancel();
+      _statusDebounceTimer = null;
+      statusSiaga.value = newStatus;
+      _pendingStatus = newStatus;
+      if (isOnline.value) _triggerAlert();
+      return;
+    }
+
+    // 2. If status matches current confirmed status, cancel pending changes
     if (newStatus == statusSiaga.value) {
       _statusDebounceTimer?.cancel();
       _statusDebounceTimer = null;
@@ -370,11 +469,12 @@ class HomeController extends GetxController {
       return;
     }
 
-    // If a new status is detected, start/reset the 10s stability timer
+    // 3. DEBOUNCE: For transitions between active statuses (e.g. AMAN -> SIAGA 3),
+    // wait 2 seconds to ensure stability before triggering alarms.
     if (newStatus != _pendingStatus) {
       _pendingStatus = newStatus;
       _statusDebounceTimer?.cancel();
-      _statusDebounceTimer = Timer(const Duration(seconds: 10), () {
+      _statusDebounceTimer = Timer(const Duration(seconds: 2), () {
         statusSiaga.value = _pendingStatus;
         _triggerAlert();
         _statusDebounceTimer = null;
@@ -419,7 +519,6 @@ class HomeController extends GetxController {
         );
         break;
       default:
-        await NotificationService.notifyAman();
         _stopAllAlarms();
     }
 
@@ -479,6 +578,8 @@ class HomeController extends GetxController {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.red.shade900,
+                elevation: 0,
+                shadowColor: Colors.transparent,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
@@ -523,6 +624,11 @@ class HomeController extends GetxController {
   // ── ETA Calculation ──────────────────────────────────────────────
 
   void _updateAiEta() {
+    if (!isOnline.value) {
+      etaOverflow.value = '---';
+      return;
+    }
+
     // distanceToGround: positive = flood, negative = safe distance (cm)
     if (distanceToGround.value >= 0) {
       etaOverflow.value = 'LUBER!';
@@ -556,15 +662,15 @@ class HomeController extends GetxController {
     );
     if (data != null) {
       weatherTemp.value = (data['temperature'] as num).toDouble();
-      weatherDesc.value = data['description'] as String;
+      weatherDesc.value = (data['description'] as String).toUpperCase();
       weatherIcon.value = data['icon'] as String;
       weatherCode.value = data['weathercode'] as int;
       weatherWindspeed.value = (data['windspeed'] as num).toDouble();
       weatherHumidity.value = (data['humidity'] as num).toInt();
       
       if (data['locationName'] != null) {
-        final region = data['region'] != null ? ', ${data['region']}' : '';
-        weatherLocationName.value = '${data['locationName']}$region';
+        final locName = data['locationName'].toString();
+        weatherLocationName.value = locName.toUpperCase();
       }
     }
     weatherLoading.value = false;
@@ -694,7 +800,11 @@ class HomeController extends GetxController {
               Get.back();
               await Geolocator.openLocationSettings();
             },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4F7EF8)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4F7EF8),
+              elevation: 0,
+              shadowColor: Colors.transparent,
+            ),
             child: const Text('Nyalakan GPS',
                 style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),

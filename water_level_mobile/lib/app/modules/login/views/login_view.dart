@@ -11,7 +11,7 @@ class LoginView extends GetView<LoginController> {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     const double overlapHeight = 35.0;
-    
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -104,72 +104,75 @@ class LoginView extends GetView<LoginController> {
                   ),
                 ],
               ),
-              padding: const EdgeInsets.fromLTRB(30, 30, 30, 30),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Selamat Datang',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF0F172A),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(30, 30, 30, 40),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Selamat Datang',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF0F172A),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Silakan masuk untuk memantau sistem hidrologi.',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF64748B),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Silakan masuk untuk memantau sistem hidrologi.',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF64748B),
+                      ),
                     ),
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  _buildLabel('Email Address'),
-                  _buildTextField(
-                    hint: 'Email aktif Anda',
-                    icon: Icons.email_outlined,
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-                  
-                  const SizedBox(height: 18),
-                  
-                  _buildLabel('Password'),
-                  _buildTextField(
-                    hint: 'Kata sandi',
-                    icon: Icons.lock_outline_rounded,
-                    isPassword: true,
-                  ),
-                  
-                  const SizedBox(height: 12),
-                  
-                  _buildAuthOptions(),
-                  
-                  const SizedBox(height: 24),
-                  
-                  _buildPrimaryButton(
-                    text: 'Masuk ke Dashboard',
-                    onPressed: () => controller.onLogin(),
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  _buildDivider(),
-                  
-                  const SizedBox(height: 16),
-                  
-                  _buildSocialButton(
-                    text: 'Lanjutkan dengan Google',
-                    onPressed: () {},
-                  ),
-                  
-                  const Spacer(),
-                  
-                  _buildFooter(),
-                ],
+                    const SizedBox(height: 32),
+                    _buildLabel('Email Address'),
+                    _buildTextField(
+                      hint: 'Email aktif Anda',
+                      icon: Icons.email_outlined,
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildLabel('Password'),
+                    _buildTextField(
+                      hint: 'Kata sandi',
+                      icon: Icons.lock_outline_rounded,
+                      isPassword: true,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildAuthOptions(),
+                    const SizedBox(height: 32),
+                    _buildPrimaryButton(
+                      text: 'Masuk Sekarang',
+                      onPressed: () => controller.onLogin(),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildDivider(),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 5,
+                          child: _buildSocialButton(
+                            text: 'Google',
+                            onPressed: () => controller.onGoogleLogin(),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 4,
+                          child: _buildGuestButton(
+                            onPressed: () => controller.onGuestAccess(),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 40),
+                    _buildFooter(),
+                  ],
+                ),
               ),
             ),
           ),
@@ -193,8 +196,8 @@ class LoginView extends GetView<LoginController> {
   }
 
   Widget _buildTextField({
-    required String hint, 
-    required IconData icon, 
+    required String hint,
+    required IconData icon,
     bool isPassword = false,
     TextInputType? keyboardType,
   }) {
@@ -204,57 +207,65 @@ class LoginView extends GetView<LoginController> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
-      child: isPassword 
-        ? Obx(() => TextField(
-            obscureText: !controller.isPasswordVisible.value,
-            keyboardType: keyboardType,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF1E293B),
-            ),
-            textAlignVertical: TextAlignVertical.center,
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: GoogleFonts.plusJakartaSans(
-                fontSize: 13, 
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF94A3B8),
+      child: isPassword
+          ? Obx(() => TextField(
+                controller: controller.passwordController,
+                obscureText: !controller.isPasswordVisible.value,
+                keyboardType: keyboardType,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1E293B),
+                ),
+                textAlignVertical: TextAlignVertical.center,
+                decoration: InputDecoration(
+                  hintText: hint,
+                  hintStyle: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF94A3B8),
+                  ),
+                  prefixIcon:
+                      Icon(icon, size: 18, color: const Color(0xFF64748B)),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      controller.isPasswordVisible.value
+                          ? Icons.visibility_rounded
+                          : Icons.visibility_off_rounded,
+                      size: 18,
+                      color: const Color(0xFF94A3B8),
+                    ),
+                    onPressed: () => controller.togglePasswordVisibility(),
+                  ),
+                  border: InputBorder.none,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                ),
+              ))
+          : TextField(
+            controller: isPassword ? controller.passwordController : controller.emailController,
+              obscureText: false,
+              keyboardType: keyboardType,
+              textAlignVertical: TextAlignVertical.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF1E293B),
               ),
-              prefixIcon: Icon(icon, size: 18, color: const Color(0xFF64748B)),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  controller.isPasswordVisible.value ? Icons.visibility_rounded : Icons.visibility_off_rounded,
-                  size: 18,
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: GoogleFonts.plusJakartaSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
                   color: const Color(0xFF94A3B8),
                 ),
-                onPressed: () => controller.togglePasswordVisibility(),
+                prefixIcon:
+                    Icon(icon, size: 18, color: const Color(0xFF64748B)),
+                border: InputBorder.none,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
             ),
-          ))
-        : TextField(
-            obscureText: false,
-            keyboardType: keyboardType,
-            textAlignVertical: TextAlignVertical.center,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF1E293B),
-            ),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: GoogleFonts.plusJakartaSans(
-                fontSize: 13, 
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF94A3B8),
-              ),
-              prefixIcon: Icon(icon, size: 18, color: const Color(0xFF64748B)),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            ),
-          ),
     );
   }
 
@@ -262,29 +273,39 @@ class LoginView extends GetView<LoginController> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          children: [
-            Obx(() => SizedBox(
-              width: 20,
-              height: 20,
-              child: Checkbox(
-                value: controller.rememberMe.value,
-                onChanged: (v) => controller.rememberMe.value = v ?? false,
-                activeColor: const Color(0xFF2563EB),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),
-              ),
-            )),
-            const SizedBox(width: 8),
-            Text(
-              'Ingat saya',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF64748B),
-              ),
+        InkWell(
+          onTap: () => controller.rememberMe.toggle(),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+            child: Row(
+              children: [
+                Obx(() => SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: Checkbox(
+                        value: controller.rememberMe.value,
+                        onChanged: (v) =>
+                            controller.rememberMe.value = v ?? false,
+                        activeColor: const Color(0xFF2563EB),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4)),
+                        side: const BorderSide(
+                            color: Color(0xFFCBD5E1), width: 1.5),
+                      ),
+                    )),
+                const SizedBox(width: 8),
+                Text(
+                  'Ingat saya',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
         TextButton(
           onPressed: () => Get.toNamed(Routes.FORGOT_PASSWORD),
@@ -302,26 +323,39 @@ class LoginView extends GetView<LoginController> {
     );
   }
 
-  Widget _buildPrimaryButton({required String text, required VoidCallback onPressed}) {
+  Widget _buildPrimaryButton(
+      {required String text, required VoidCallback onPressed}) {
     return SizedBox(
       width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2563EB),
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        ),
-        child: Text(
-          text,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-            color: Colors.white,
+      height: 60,
+        child: Obx(() => ElevatedButton(
+          onPressed: controller.isLoading.value ? null : () => controller.onLogin(),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF2563EB),
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shadowColor: Colors.transparent,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
-        ),
-      ),
+          child: controller.isLoading.value
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  'Masuk Sekarang',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+        )),
     );
   }
 
@@ -345,7 +379,8 @@ class LoginView extends GetView<LoginController> {
     );
   }
 
-  Widget _buildSocialButton({required String text, required VoidCallback onPressed}) {
+  Widget _buildSocialButton(
+      {required String text, required VoidCallback onPressed}) {
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
@@ -353,6 +388,7 @@ class LoginView extends GetView<LoginController> {
         side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         backgroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -360,15 +396,50 @@ class LoginView extends GetView<LoginController> {
           Image.network(
             'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Google_Favicon_2025.svg/960px-Google_Favicon_2025.svg.png',
             height: 20,
-            errorBuilder: (context, error, stackTrace) => const Icon(Icons.g_mobiledata_rounded, color: Colors.blue),
+            errorBuilder: (context, error, stackTrace) =>
+                const Icon(Icons.g_mobiledata_rounded, color: Colors.blue),
           ),
-          const SizedBox(width: 10),
-          Text(
-            text,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF334155),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              text,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF334155),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGuestButton({required VoidCallback onPressed}) {
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(double.infinity, 56),
+        side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        backgroundColor: const Color(0xFFF8FAFC),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.person_outline_rounded, size: 18, color: Color(0xFF64748B)),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              'Guest',
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF334155),
+              ),
             ),
           ),
         ],

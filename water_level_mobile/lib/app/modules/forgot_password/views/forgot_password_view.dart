@@ -150,6 +150,7 @@ class ForgotPasswordView extends GetView<ForgotPasswordController> {
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: TextField(
+        controller: controller.emailController,
         keyboardType: keyboardType,
         textAlignVertical: TextAlignVertical.center,
         style: GoogleFonts.plusJakartaSans(
@@ -166,7 +167,7 @@ class ForgotPasswordView extends GetView<ForgotPasswordController> {
           ),
           prefixIcon: Icon(icon, size: 20, color: const Color(0xFF64748B)),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
       ),
     );
@@ -175,33 +176,43 @@ class ForgotPasswordView extends GetView<ForgotPasswordController> {
   Widget _buildPrimaryButton({required String text, required VoidCallback onPressed}) {
     return SizedBox(
       width: double.infinity,
-      height: 58,
-      child: ElevatedButton(
-        onPressed: onPressed,
+      height: 60,
+      child: Obx(() => ElevatedButton(
+        onPressed: controller.isLoading.value ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF2563EB),
           foregroundColor: Colors.white,
           elevation: 0,
+          shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
-        child: Text(
-          text,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-            color: Colors.white,
-          ),
-        ),
-      ),
+        child: controller.isLoading.value
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Text(
+                text,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+      )),
     );
   }
 
   Widget _buildSecondaryButton({required String text, required VoidCallback onPressed}) {
     return SizedBox(
       width: double.infinity,
-      height: 58,
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
+      height: 60,
+      child: Obx(() => OutlinedButton.icon(
+        onPressed: controller.isLoading.value ? null : onPressed,
         icon: const Icon(Icons.message_rounded, size: 18, color: Color(0xFF22C55E)),
         label: Text(
           text,
@@ -216,7 +227,7 @@ class ForgotPasswordView extends GetView<ForgotPasswordController> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           backgroundColor: Colors.white,
         ),
-      ),
+      )),
     );
   }
 }

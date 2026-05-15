@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'dart:math' as math;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../home/controllers/home_controller.dart';
 import '../../../routes/app_pages.dart';
 import '../controllers/analysis_controller.dart';
 
@@ -19,7 +19,6 @@ class AnalysisView extends GetView<AnalysisController> {
         child: Column(
           children: [
             _buildPremiumHeader(context),
-            _buildSegmentedControl(context),
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -28,6 +27,8 @@ class AnalysisView extends GetView<AnalysisController> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _buildSegmentedControl(context),
+                    _buildDateRangeDisplay(context),
                     const SizedBox(height: 10),
                     _buildModernChartCard(context),
                     const SizedBox(height: 24),
@@ -43,136 +44,233 @@ class AnalysisView extends GetView<AnalysisController> {
     );
   }
 
-  // ── PREMIUM HEADER ────────────────────────────────────────────────
-  Widget _buildPremiumHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+  Widget _buildDateRangeDisplay(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Obx(() {
+            final start = DateFormat('dd MMM yyyy').format(controller.startDate.value);
+            final end = DateFormat('dd MMM yyyy').format(controller.endDate.value);
+            final isSameDay = start == end;
+
+            return Row(
               children: [
+                Icon(
+                  Icons.event_note_rounded,
+                  size: 14,
+                  color: context.textMuted.withValues(alpha: 0.6),
+                ),
+                const SizedBox(width: 8),
                 Text(
-                  'MONITORING ANALISIS',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.accent,
-                    letterSpacing: 1.2,
+                  isSameDay ? start : '$start - $end',
+                  style: GoogleFonts.rajdhani(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: context.textMuted,
+                    letterSpacing: 0.3,
                   ),
                 ),
-                const SizedBox(height: 6),
-                Obx(() => GestureDetector(
-                      onTap: () => _showDevicePicker(context),
-                      behavior: HitTestBehavior.opaque,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              controller
-                                  .homeController.selectedDeviceName.value,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
-                                color: context.textPrimary,
-                                letterSpacing: -0.5,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              color: context.dividerColor.withOpacity(0.5),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(Icons.keyboard_arrow_down_rounded,
-                                size: 20, color: context.textPrimary),
-                          ),
-                        ],
-                      ),
-                    )),
               ],
-            ),
-          ),
-          _headerAction(context, Icons.bar_chart_rounded),
+            );
+          }),
+          Obx(() {
+            final isCustomActive = controller.selectedPeriod.value == 'Custom';
+            return GestureDetector(
+              onTap: () => controller.selectDateRange(context),
+              behavior: HitTestBehavior.opaque,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isCustomActive 
+                      ? AppColors.accent 
+                      : AppColors.accent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: isCustomActive ? [
+                    BoxShadow(
+                      color: AppColors.accent.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    )
+                  ] : [],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.calendar_month_rounded,
+                      size: 13,
+                      color: isCustomActive ? Colors.white : AppColors.accent,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'CUSTOM',
+                      style: GoogleFonts.inter(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        color: isCustomActive ? Colors.white : AppColors.accent,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
         ],
       ),
     );
   }
 
-  Widget _headerAction(BuildContext context, IconData icon) {
+  // ── PREMIUM HEADER ────────────────────────────────────────────────
+  Widget _buildPremiumHeader(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: context.bgCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.borderColor),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () => _showDevicePicker(context),
+              behavior: HitTestBehavior.opaque,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'HISTORY ANALISIS',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.accent,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Obx(() => Flexible(
+                            child: Text(
+                              controller.homeController.selectedDeviceName.value,
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                color: context.textPrimary,
+                                letterSpacing: -0.5,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          )),
+                      const SizedBox(width: 6),
+                      Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: context.textMuted.withValues(alpha: 0.6),
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Obx(() => Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_rounded,
+                            size: 10,
+                            color: AppColors.accent.withValues(alpha: 0.7),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            controller.homeController.selectedDeviceLocation.value.toUpperCase(),
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: context.textMuted,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      )),
+                ],
+              ),
+            ),
+          ),
+          _headerAction(context, Icons.refresh_rounded, 
+            onTap: () => controller.fetchHistory()),
         ],
       ),
-      child: Icon(icon, color: AppColors.accent, size: 22),
+    );
+  }
+
+  Widget _headerAction(BuildContext context, IconData icon, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: context.bgCard,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: context.borderColor),
+        ),
+        child: Icon(icon, color: AppColors.accent, size: 20),
+      ),
     );
   }
 
   // ── SEGMENTED CONTROL ─────────────────────────────────────────────
   Widget _buildSegmentedControl(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: LayoutBuilder(builder: (context, constraints) {
         final totalWidth = constraints.maxWidth;
-        final itemCount = controller.periods.length;
-        final itemWidth = (totalWidth - 8) / itemCount;
 
         return Container(
-          height: 52,
+          height: 44,
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             color: context.isDark
                 ? const Color(0xFF0F172A)
-                : const Color(0xFFF5F8FF),
-            borderRadius: BorderRadius.circular(16),
+                : const Color(0xFFE2E8F0), // Slightly darker for better visibility
+            borderRadius: BorderRadius.circular(100),
             border: Border.all(
-              color: context.isDark
-                  ? Colors.white.withOpacity(0.05)
-                  : AppColors.accent.withOpacity(0.1),
-              width: 1.5,
+              color: context.isDark 
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.black.withValues(alpha: 0.05),
+              width: 1,
             ),
           ),
           child: Obx(() {
+            final visiblePeriods = ['Harian', 'Mingguan', 'Bulanan', 'Tahunan'];
             final selectedIndex =
-                controller.periods.indexOf(controller.selectedPeriod.value);
+                visiblePeriods.indexOf(controller.selectedPeriod.value);
+            // Fallback if 'Custom' is selected elsewhere
+            final safeIndex = selectedIndex == -1 ? 0 : selectedIndex;
+            final itemWidth = (totalWidth - 8) / visiblePeriods.length;
 
             return Stack(
               children: [
-                // Sliding Indicator
+                // Perfect Pill Indicator
                 AnimatedPositioned(
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.easeInOutBack,
-                  left: selectedIndex * itemWidth,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutCubic,
+                  left: safeIndex * itemWidth,
+                  top: 0,
+                  bottom: 0,
                   width: itemWidth,
-                  height: 44,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: context.isDark
-                          ? const Color(0xFF1E293B)
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+                      color: context.isDark ? const Color(0xFF1E293B) : Colors.white,
+                      borderRadius: BorderRadius.circular(100),
+                      border: Border.all(
+                        color: AppColors.accent.withValues(alpha: 0.3),
+                        width: 1.5,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        )
+                          color: Colors.black.withValues(
+                              alpha: context.isDark ? 0.3 : 0.04),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
                       ],
                     ),
                   ),
@@ -180,78 +278,29 @@ class AnalysisView extends GetView<AnalysisController> {
 
                 // Labels Row
                 Row(
-                  children: controller.periods.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final period = entry.value;
+                  children: visiblePeriods.map((period) {
                     final isSelected =
                         controller.selectedPeriod.value == period;
-                    final isCustom = period == 'Custom';
 
                     return Expanded(
-                      child: Row(
-                        children: [
-                          if (isCustom)
-                            Container(
-                              width: 1.5,
-                              height: 18,
-                              margin: const EdgeInsets.only(right: 4),
-                              decoration: BoxDecoration(
-                                color: context.dividerColor.withOpacity(0.5),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                if (isCustom) {
-                                  controller.selectDateRange(context);
-                                } else {
-                                  controller.changePeriod(period);
-                                }
-                              },
-                              behavior: HitTestBehavior.opaque,
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color: isCustom && !isSelected
-                                      ? (context.isDark
-                                          ? Colors.white.withOpacity(0.05)
-                                          : Colors.white)
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: AnimatedDefaultTextStyle(
-                                  duration: const Duration(milliseconds: 300),
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 10,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w800
-                                        : FontWeight.w600,
-                                    color: isSelected
-                                        ? AppColors.accent
-                                        : context.textSecondary,
-                                    letterSpacing: 0,
-                                  ),
-                                  child: isCustom
-                                      ? Icon(Icons.calendar_month_rounded,
-                                          size: 18,
-                                          color: isSelected
-                                              ? AppColors.accent
-                                              : context.textSecondary)
-                                      : FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 4),
-                                            child: Text(period.toUpperCase()),
-                                          ),
-                                        ),
-                                ),
-                              ),
+                      child: GestureDetector(
+                        onTap: () => controller.changePeriod(context, period),
+                        behavior: HitTestBehavior.opaque,
+                        child: Center(
+                          child: Text(
+                            period.toUpperCase(),
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: isSelected
+                                  ? FontWeight.w900
+                                  : FontWeight.w700,
+                              color: isSelected
+                                  ? AppColors.accent
+                                  : const Color(0xFF64748B),
+                              letterSpacing: 0.8,
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     );
                   }).toList(),
@@ -269,15 +318,11 @@ class AnalysisView extends GetView<AnalysisController> {
     return Container(
       decoration: BoxDecoration(
         color: context.bgCard,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: context.borderColor, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(context.isDark ? 0.3 : 0.04),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
-          )
-        ],
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: context.dividerColor.withValues(alpha: 0.1),
+          width: 1,
+        ),
       ),
       child: Column(
         children: [
@@ -291,7 +336,7 @@ class AnalysisView extends GetView<AnalysisController> {
                   children: [
                     Text(
                       'FLUKTUASI LEVEL AIR',
-                      style: GoogleFonts.plusJakartaSans(
+                      style: GoogleFonts.inter(
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
                         color: context.textMuted,
@@ -301,11 +346,11 @@ class AnalysisView extends GetView<AnalysisController> {
                     const SizedBox(height: 4),
                     Obx(() => Text(
                           controller.periodLabel.toUpperCase(),
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 16,
+                          style: GoogleFonts.rajdhani(
+                            fontSize: 18,
                             fontWeight: FontWeight.w800,
                             color: context.textPrimary,
-                            letterSpacing: -0.5,
+                            letterSpacing: -0.2,
                           ),
                         )),
                   ],
@@ -324,7 +369,7 @@ class AnalysisView extends GetView<AnalysisController> {
                       const SizedBox(width: 6),
                       Text(
                         'Meter (m)',
-                        style: GoogleFonts.plusJakartaSans(
+                        style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                           color: AppColors.statusSafe,
@@ -359,11 +404,11 @@ class AnalysisView extends GetView<AnalysisController> {
 
   Widget _buildStatsRow(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
       decoration: BoxDecoration(
         color: context.isDark
-            ? Colors.white.withOpacity(0.02)
-            : Colors.black.withOpacity(0.01),
+            ? Colors.white.withValues(alpha: 0.02)
+            : Colors.black.withValues(alpha: 0.01),
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: Column(
@@ -373,7 +418,7 @@ class AnalysisView extends GetView<AnalysisController> {
               Expanded(
                 child: Obx(() => _buildModernMiniStat(
                       context,
-                      'MINIMUM',
+                      'TERENDAH',
                       controller.minLevel.value.toStringAsFixed(2),
                       Icons.arrow_downward_rounded,
                       const Color(0xFF3B82F6),
@@ -383,7 +428,7 @@ class AnalysisView extends GetView<AnalysisController> {
               Expanded(
                 child: Obx(() => _buildModernMiniStat(
                       context,
-                      'MAKSIMUM',
+                      'TERTINGGI',
                       controller.maxLevel.value.toStringAsFixed(2),
                       Icons.arrow_upward_rounded,
                       const Color(0xFFEF4444),
@@ -392,12 +437,12 @@ class AnalysisView extends GetView<AnalysisController> {
             ],
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20),
+            padding: const EdgeInsets.symmetric(vertical: 16),
             child: Divider(
-                color: context.dividerColor.withOpacity(0.4),
+                color: context.dividerColor.withValues(alpha: 0.4), // Increased visibility
                 height: 1,
-                indent: 24,
-                endIndent: 24),
+                indent: 20,
+                endIndent: 20),
           ),
           Row(
             children: [
@@ -418,7 +463,7 @@ class AnalysisView extends GetView<AnalysisController> {
                       '${controller.totalSamples.value}',
                       Icons.query_stats_rounded,
                       const Color(0xFF8B5CF6),
-                      unit: ' jam',
+                      unit: ' data',
                     )),
               ),
             ],
@@ -435,9 +480,9 @@ class AnalysisView extends GetView<AnalysisController> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            context.dividerColor.withOpacity(0),
-            context.dividerColor.withOpacity(0.6),
-            context.dividerColor.withOpacity(0),
+            context.dividerColor.withValues(alpha: 0),
+            context.dividerColor.withValues(alpha: 0.8), // Increased visibility
+            context.dividerColor.withValues(alpha: 0),
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -449,56 +494,50 @@ class AnalysisView extends GetView<AnalysisController> {
   Widget _buildModernMiniStat(BuildContext context, String label, String value,
       IconData icon, Color color,
       {String unit = ' m'}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 12),
-              ),
-              const SizedBox(width: 8),
+              Icon(icon, color: color.withValues(alpha: 0.8), size: 11),
+              const SizedBox(width: 6),
               Text(
                 label,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 10,
+                style: GoogleFonts.inter(
+                  fontSize: 9,
                   fontWeight: FontWeight.w800,
-                  color: context.textMuted,
+                  color: context.textMuted.withValues(alpha: 0.8),
                   letterSpacing: 0.5,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          RichText(
-            text: TextSpan(
-              children: [
-                TextSpan(
-                  text: value,
-                  style: GoogleFonts.rajdhani(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: context.textPrimary,
-                    height: 1,
-                  ),
+          const SizedBox(height: 6),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                value,
+                style: GoogleFonts.rajdhani(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: context.textPrimary,
+                  height: 1,
                 ),
-                TextSpan(
-                  text: unit,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: context.textSecondary,
-                  ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                unit,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: context.textSecondary.withValues(alpha: 0.6),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
@@ -506,94 +545,274 @@ class AnalysisView extends GetView<AnalysisController> {
   }
 
   Widget _buildRefinedChart(BuildContext context) {
-    return LineChart(
-      LineChartData(
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          horizontalInterval: 0.5,
-          getDrawingHorizontalLine: (value) => FlLine(
-            color: context.dividerColor.withOpacity(0.4),
-            strokeWidth: 1,
-            dashArray: [8, 4],
+    if (controller.historyData.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.query_stats_rounded,
+                color: context.dividerColor, size: 40),
+            const SizedBox(height: 12),
+            Text(
+              'Data tidak tersedia untuk periode ini',
+              style: GoogleFonts.inter(
+                color: context.textMuted,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final spots = controller.historyData.asMap().entries.map((e) {
+      return FlSpot(e.key.toDouble(), (e.value['level'] as num).toDouble());
+    }).toList();
+
+    double minY = spots.map((s) => s.y).reduce((a, b) => a < b ? a : b) - 0.2;
+    double maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b) + 0.2;
+
+    // Safety for same values
+    if (minY == maxY) {
+      minY -= 0.5;
+      maxY += 0.5;
+    }
+
+    final double yAxisWidth = 40.0;
+    final double contentWidth =
+        math.max(Get.width - 72, spots.length * 45.0);
+
+    return Row(
+      children: [
+        // Sticky Y-Axis
+        SizedBox(
+          width: yAxisWidth,
+          height: 250,
+          child: LineChart(
+            LineChartData(
+              minY: minY,
+              maxY: maxY,
+              gridData: const FlGridData(show: false),
+              borderData: FlBorderData(show: false),
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: yAxisWidth,
+                    interval: (maxY - minY) / 5 > 0 ? (maxY - minY) / 5 : 1,
+                    getTitlesWidget: (value, meta) {
+                      return Text(
+                        value.toStringAsFixed(1),
+                        style: GoogleFonts.inter(
+                          fontSize: 9,
+                          color: context.textMuted,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                rightTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                bottomTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              ),
+              lineBarsData: [
+                LineChartBarData(spots: [FlSpot(0, minY)], show: false)
+              ],
+            ),
           ),
         ),
-        titlesData: FlTitlesData(
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 32,
-              interval: 6,
-              getTitlesWidget: (value, meta) {
-                return Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Text(
-                    '${value.toInt()}:00',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 10,
-                      color: context.textMuted,
-                      fontWeight: FontWeight.w700,
+        // Scrollable Chart
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: SizedBox(
+              width: contentWidth,
+              height: 250,
+              child: LineChart(
+                LineChartData(
+                  lineTouchData: LineTouchData(
+                    getTouchedSpotIndicator:
+                        (LineChartBarData barData, List<int> spotIndexes) {
+                      return spotIndexes.map((index) {
+                        return TouchedSpotIndicatorData(
+                          FlLine(
+                            color: AppColors.accent.withOpacity(0.3),
+                            strokeWidth: 2,
+                            dashArray: [6, 4],
+                          ),
+                          FlDotData(
+                            show: true,
+                            getDotPainter: (spot, percent, barData, index) =>
+                                FlDotCirclePainter(
+                              radius: 5,
+                              color: AppColors.accent,
+                              strokeWidth: 2,
+                              strokeColor: context.bgCard,
+                            ),
+                          ),
+                        );
+                      }).toList();
+                    },
+                    touchTooltipData: LineTouchTooltipData(
+                      getTooltipColor: (spot) => const Color(0xFF1E293B),
+                      tooltipBorderRadius: BorderRadius.circular(8),
+                      tooltipPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      tooltipMargin: 12,
+                      fitInsideHorizontally: true,
+                      fitInsideVertically: true,
+                      getTooltipItems: (touchedSpots) {
+                        return touchedSpots.map((spot) {
+                          final data = controller.historyData[spot.spotIndex];
+                          final time = data['time'] as DateTime;
+                          final period = controller.selectedPeriod.value;
+                          
+                          String format = 'dd MMM yyyy';
+                          if (period == 'Harian') {
+                            format = 'HH:mm';
+                          } else if (period == 'Tahunan') {
+                            format = 'MMM yyyy';
+                          }
+                          
+                          final timeStr = DateFormat(format).format(time);
+                          return LineTooltipItem(
+                            '$timeStr\n',
+                            GoogleFonts.inter(
+                              color: Colors.white.withOpacity(0.7),
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: '${spot.y.toStringAsFixed(2)} m',
+                                style: GoogleFonts.rajdhani(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList();
+                      },
                     ),
                   ),
-                );
-              },
-            ),
-          ),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 44,
-              interval: 0.5,
-              getTitlesWidget: (value, meta) {
-                return Text(
-                  value.toStringAsFixed(1),
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 10,
-                    color: context.textMuted,
-                    fontWeight: FontWeight.w700,
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: true,
+                    horizontalInterval:
+                        (maxY - minY) / 5 > 0 ? (maxY - minY) / 5 : 1,
+                    getDrawingHorizontalLine: (value) => FlLine(
+                      color: context.dividerColor.withOpacity(0.05),
+                      strokeWidth: 1,
+                    ),
+                    getDrawingVerticalLine: (value) => FlLine(
+                      color: context.dividerColor.withOpacity(0.05),
+                      strokeWidth: 1,
+                    ),
                   ),
-                );
-              },
-            ),
-          ),
-        ),
-        borderData: FlBorderData(show: false),
-        minY: 0.8,
-        maxY: 2.2,
-        lineBarsData: [
-          LineChartBarData(
-            spots: List.generate(
-                24, (i) => FlSpot(i.toDouble(), 1.2 + (i % 5) * 0.1)),
-            isCurved: true,
-            curveSmoothness: 0.35,
-            preventCurveOverShooting: true,
-            gradient: const LinearGradient(
-              colors: [AppColors.accent, Color(0xFF6366F1)],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
-            barWidth: 4,
-            isStrokeCapRound: true,
-            dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(
-              show: true,
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.accent.withOpacity(0.2),
-                  AppColors.accent.withOpacity(0.0),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+                  titlesData: FlTitlesData(
+                    leftTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 32,
+                        interval:
+                            math.max(1.0, (spots.length / 12).floorToDouble()),
+                        getTitlesWidget: (value, meta) {
+                          final index = value.toInt();
+                          if (index < 0 ||
+                              index >= controller.historyData.length) {
+                            return const SizedBox();
+                          }
+                          final data = controller.historyData[index];
+                          final time = data['time'] as DateTime;
+                          final period = controller.selectedPeriod.value;
+
+                          String label = '';
+                          if (period == 'Harian') {
+                            label = DateFormat('HH:mm').format(time);
+                          } else if (period == 'Mingguan') {
+                            label = DateFormat('dd/MM HH:mm').format(time);
+                          } else if (period == 'Bulanan' ||
+                              (period == 'Custom' &&
+                                  controller.historyData.length < 100)) {
+                            label = DateFormat('dd MMM').format(time);
+                          } else if (period == 'Tahunan') {
+                            label = DateFormat('MMM yy').format(time);
+                          } else {
+                            // Default for long custom range
+                            label = DateFormat('dd/MM').format(time);
+                          }
+
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 10),
+                            child: Text(
+                              label,
+                              style: GoogleFonts.inter(
+                                fontSize: 9,
+                                color: context.textMuted,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  minY: minY,
+                  maxY: maxY,
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: spots,
+                      isCurved: true,
+                      barWidth: 4,
+                      isStrokeCapRound: true,
+                      gradient: const LinearGradient(
+                        colors: [AppColors.accent, Color(0xFF6366F1)],
+                      ),
+                      dotData: FlDotData(
+                        show: spots.length < 50,
+                        getDotPainter: (spot, percent, barData, index) =>
+                            FlDotCirclePainter(
+                          radius: 2,
+                          color: AppColors.accent,
+                          strokeWidth: 1.5,
+                          strokeColor: context.bgCard,
+                        ),
+                      ),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.accent.withOpacity(0.2),
+                            AppColors.accent.withOpacity(0),
+                          ],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
+
   }
 
   // ── ENHANCED HISTORY SECTION ──────────────────────────────────────
@@ -608,66 +827,83 @@ class AnalysisView extends GetView<AnalysisController> {
             children: [
               Text(
                 'RIWAYAT LOG DATA',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
                   fontWeight: FontWeight.w800,
                   color: context.textPrimary,
                   letterSpacing: 0.5,
                 ),
               ),
-              Text(
-                'Lihat Semua',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.accent,
+              GestureDetector(
+                onTap: () => Get.toNamed(Routes.HISTORY_LOG),
+                behavior: HitTestBehavior.opaque,
+                child: Text(
+                  'Lihat Semua',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.accent,
+                  ),
                 ),
               ),
             ],
           ),
         ),
-        Container(
-          decoration: BoxDecoration(
-            color: context.bgCard,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: context.borderColor),
-          ),
-          child: Obx(() {
-            if (controller.historyData.isEmpty) {
-              return Padding(
-                padding: const EdgeInsets.all(40),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Icon(Icons.history_rounded,
-                          size: 48, color: context.dividerColor),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Belum ada data log',
-                        style: GoogleFonts.plusJakartaSans(
-                          color: context.textMuted,
-                          fontWeight: FontWeight.w600,
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 450),
+          child: Container(
+            decoration: BoxDecoration(
+              color: context.bgCard,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: context.borderColor),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Obx(() {
+              if (controller.historyData.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.all(40),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.history_rounded,
+                            size: 48, color: context.dividerColor),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Belum ada data log',
+                          style: GoogleFonts.inter(
+                            color: context.textMuted,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                  ),
+                );
+              }
+              return Theme(
+                data: Theme.of(context).copyWith(
+                  scrollbarTheme: ScrollbarThemeData(
+                    thumbColor: WidgetStateProperty.all(AppColors.accent.withValues(alpha: 0.2)),
+                    thickness: WidgetStateProperty.all(4),
+                    radius: const Radius.circular(10),
+                  ),
+                ),
+                child: Scrollbar(
+                  child: ListView.separated(
+                    padding: EdgeInsets.zero,
+                    itemCount: controller.historyData.length,
+                    separatorBuilder: (context, index) => Divider(
+                        height: 1, color: context.dividerColor.withValues(alpha: 0.1)),
+                    itemBuilder: (context, index) {
+                      final data = controller.historyData[index];
+                      return _buildModernHistoryItem(context, data);
+                    },
                   ),
                 ),
               );
-            }
-            return ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: controller.historyData.length > 8
-                  ? 8
-                  : controller.historyData.length,
-              separatorBuilder: (context, index) => Divider(
-                  height: 1, color: context.dividerColor.withOpacity(0.5)),
-              itemBuilder: (context, index) {
-                final data = controller.historyData[index];
-                return _buildModernHistoryItem(context, data);
-              },
-            );
-          }),
+            }),
+          ),
         ),
       ],
     );
@@ -680,7 +916,7 @@ class AnalysisView extends GetView<AnalysisController> {
     final isAman = data['status'] == 'Aman';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         children: [
           // Time Visual
@@ -697,7 +933,7 @@ class AnalysisView extends GetView<AnalysisController> {
               children: [
                 Text(
                   time,
-                  style: GoogleFonts.plusJakartaSans(
+                  style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: context.textPrimary,
@@ -705,7 +941,7 @@ class AnalysisView extends GetView<AnalysisController> {
                 ),
                 Text(
                   'WIB',
-                  style: GoogleFonts.plusJakartaSans(
+                  style: GoogleFonts.inter(
                     fontSize: 8,
                     fontWeight: FontWeight.w700,
                     color: context.textMuted,
@@ -732,7 +968,7 @@ class AnalysisView extends GetView<AnalysisController> {
                     const SizedBox(width: 4),
                     Text(
                       'meter',
-                      style: GoogleFonts.plusJakartaSans(
+                      style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: context.textSecondary,
@@ -742,7 +978,7 @@ class AnalysisView extends GetView<AnalysisController> {
                 ),
                 Text(
                   date,
-                  style: GoogleFonts.plusJakartaSans(
+                  style: GoogleFonts.inter(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
                     color: context.textMuted,
@@ -776,19 +1012,12 @@ class AnalysisView extends GetView<AnalysisController> {
             decoration: BoxDecoration(
               color: color,
               shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: color.withOpacity(0.4),
-                  blurRadius: 4,
-                  spreadRadius: 1,
-                )
-              ],
             ),
           ),
           const SizedBox(width: 8),
           Text(
             status.toUpperCase(),
-            style: GoogleFonts.plusJakartaSans(
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.w900,
               color: color,
@@ -840,7 +1069,7 @@ class AnalysisView extends GetView<AnalysisController> {
           const SizedBox(height: 6),
           Text(
             label,
-            style: GoogleFonts.plusJakartaSans(
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: active ? FontWeight.w800 : FontWeight.w600,
               color: active ? AppColors.accent : context.textMuted,
@@ -863,33 +1092,25 @@ class AnalysisView extends GetView<AnalysisController> {
         padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
         decoration: BoxDecoration(
           color: context.bgCard,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
-            )
-          ],
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         ),
         child: Column(
           children: [
             Container(
-              width: 50,
-              height: 5,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
-                color: context.dividerColor.withOpacity(0.6),
-                borderRadius: BorderRadius.circular(10),
+                color: context.dividerColor.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
             const SizedBox(height: 24),
             Text(
               'Pilih Lokasi Pemantauan',
-              style: GoogleFonts.plusJakartaSans(
+              style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
                 color: context.textPrimary,
-                letterSpacing: -0.5,
               ),
             ),
             const SizedBox(height: 24),
@@ -906,17 +1127,22 @@ class AnalysisView extends GetView<AnalysisController> {
                             .contains(val.toLowerCase()))
                     .toList();
               },
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+              style: GoogleFonts.inter(
+                  fontSize: 13, fontWeight: FontWeight.w500),
               decoration: InputDecoration(
-                hintText: 'Cari lokasi atau nama perangkat...',
-                prefixIcon:
-                    const Icon(Icons.search_rounded, color: AppColors.accent),
+                hintText: 'Cari lokasi atau perangkat...',
+                hintStyle: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: context.textMuted.withValues(alpha: 0.5),
+                ),
+                prefixIcon: Icon(Icons.search_rounded,
+                    color: AppColors.accent.withValues(alpha: 0.7), size: 20),
                 filled: true,
                 fillColor: context.isDark
-                    ? Colors.white.withOpacity(0.05)
-                    : Colors.black.withOpacity(0.04),
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.black.withValues(alpha: 0.05),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
                 ),
                 contentPadding: const EdgeInsets.symmetric(vertical: 16),
@@ -929,8 +1155,7 @@ class AnalysisView extends GetView<AnalysisController> {
                   return Center(
                     child: Text(
                       'Tidak ada perangkat ditemukan',
-                      style:
-                          GoogleFonts.plusJakartaSans(color: context.textMuted),
+                      style: GoogleFonts.inter(color: context.textMuted),
                     ),
                   );
                 }
@@ -943,68 +1168,13 @@ class AnalysisView extends GetView<AnalysisController> {
                         homeController.selectedDeviceSlug.value ==
                             device['slug'];
 
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 14),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.accent.withOpacity(0.08)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isSelected
-                              ? AppColors.accent
-                              : context.dividerColor.withOpacity(0.5),
-                          width: isSelected ? 1.5 : 1,
-                        ),
-                      ),
-                      child: ListTile(
-                        onTap: () {
-                          homeController.onDeviceSelected(device);
-                          Get.back();
-                        },
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 8),
-                        leading: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppColors.accent
-                                : context.dividerColor.withOpacity(0.4),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Icon(
-                            Icons.location_on_rounded,
-                            size: 22,
-                            color:
-                                isSelected ? Colors.white : context.textMuted,
-                          ),
-                        ),
-                        title: Text(
-                          (device['location'] ?? 'Unknown').toUpperCase(),
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: isSelected
-                                ? AppColors.accent
-                                : context.textPrimary,
-                          ),
-                        ),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            device['name'] ?? 'Device',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: context.textSecondary,
-                            ),
-                          ),
-                        ),
-                        trailing: isSelected
-                            ? const Icon(Icons.check_circle_rounded,
-                                color: AppColors.accent)
-                            : null,
-                      ),
+                    return _DevicePickerItem(
+                      device: device,
+                      isSelected: isSelected,
+                      onTap: () {
+                        homeController.onDeviceSelected(device);
+                        Get.back();
+                      },
                     );
                   },
                 );
@@ -1014,6 +1184,112 @@ class AnalysisView extends GetView<AnalysisController> {
         ),
       ),
       isScrollControlled: true,
+    );
+  }
+}
+
+class _DevicePickerItem extends StatefulWidget {
+  final Map<String, dynamic> device;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _DevicePickerItem({
+    required this.device,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  State<_DevicePickerItem> createState() => _DevicePickerItemState();
+}
+
+class _DevicePickerItemState extends State<_DevicePickerItem> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) => setState(() => _isPressed = false),
+      onTapCancel: () => setState(() => _isPressed = false),
+      onTap: widget.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: _isPressed
+              ? context.dividerColor.withValues(alpha: 0.1)
+              : (widget.isSelected
+                  ? AppColors.accent.withValues(alpha: 0.05)
+                  : context.bgCard),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: widget.isSelected
+                ? AppColors.accent
+                : context.dividerColor.withValues(alpha: 0.2),
+            width: widget.isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: widget.isSelected
+                    ? AppColors.accent
+                    : context.dividerColor.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.location_on_rounded,
+                size: 20,
+                color: widget.isSelected ? Colors.white : context.textMuted,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    (widget.device['location'] ?? 'Unknown').toUpperCase(),
+                    style: GoogleFonts.rajdhani(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: widget.isSelected
+                          ? AppColors.accent
+                          : context.textPrimary,
+                      letterSpacing: 0.5,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    widget.device['name'] ?? 'Device',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: context.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              widget.isSelected
+                  ? Icons.check_circle_rounded
+                  : Icons.chevron_right_rounded,
+              color: widget.isSelected
+                  ? AppColors.accent
+                  : context.textMuted.withValues(alpha: 0.3),
+              size: 20,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

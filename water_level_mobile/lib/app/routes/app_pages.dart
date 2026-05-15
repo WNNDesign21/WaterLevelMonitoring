@@ -18,6 +18,11 @@ import '../modules/reset_password/bindings/reset_password_binding.dart';
 import '../modules/reset_password/views/reset_password_view.dart';
 import '../modules/analysis/bindings/analysis_binding.dart';
 import '../modules/analysis/views/analysis_view.dart';
+import '../modules/analysis/views/history_log_view.dart';
+import '../modules/complete_profile/bindings/complete_profile_binding.dart';
+import '../modules/complete_profile/views/complete_profile_view.dart';
+import '../modules/edit_profile/bindings/edit_profile_binding.dart';
+import '../modules/edit_profile/views/edit_profile_view.dart';
 
 part 'app_routes.dart';
 
@@ -71,6 +76,21 @@ class AppPages {
       name: _Paths.ANALYSIS,
       page: () => const AnalysisView(),
       binding: AnalysisBinding(),
+    ),
+    GetPage(
+      name: _Paths.HISTORY_LOG,
+      page: () => const HistoryLogView(),
+      binding: AnalysisBinding(),
+    ),
+    GetPage(
+      name: _Paths.COMPLETE_PROFILE,
+      page: () => const CompleteProfileView(),
+      binding: CompleteProfileBinding(),
+    ),
+    GetPage(
+      name: _Paths.EDIT_PROFILE,
+      page: () => const EditProfileView(),
+      binding: EditProfileBinding(),
     ),
   ];
 }

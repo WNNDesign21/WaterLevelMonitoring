@@ -129,23 +129,23 @@ class RegisterView extends GetView<RegisterController> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildLabel('Nama Lengkap'),
-          _buildTextField(hint: 'Nama lengkap Anda', icon: Icons.person_outline_rounded),
+          _buildTextField(hint: 'Nama lengkap Anda', icon: Icons.person_outline_rounded, controller: controller.fullNameController),
           const SizedBox(height: 16),
           
           _buildLabel('Nomor WhatsApp'),
-          _buildTextField(hint: '0812xxxx', icon: Icons.phone_android_rounded, keyboardType: TextInputType.phone),
+          _buildTextField(hint: '0812xxxx', icon: Icons.phone_android_rounded, keyboardType: TextInputType.phone, controller: controller.whatsappController),
           const SizedBox(height: 16),
           
           _buildLabel('Email Aktif'),
-          _buildTextField(hint: 'email@example.com', icon: Icons.alternate_email_rounded, keyboardType: TextInputType.emailAddress),
+          _buildTextField(hint: 'email@example.com', icon: Icons.alternate_email_rounded, keyboardType: TextInputType.emailAddress, controller: controller.emailController),
           const SizedBox(height: 16),
           
           _buildLabel('Kata Sandi'),
-          _buildTextField(hint: 'Buat kata sandi', isPassword: true, icon: Icons.lock_outline_rounded),
+          _buildTextField(hint: 'Buat kata sandi', isPassword: true, icon: Icons.lock_outline_rounded, controller: controller.passwordController),
           const SizedBox(height: 16),
           
           _buildLabel('Konfirmasi Sandi'),
-          _buildTextField(hint: 'Ulangi kata sandi', isPassword: true, icon: Icons.lock_outline_rounded),
+          _buildTextField(hint: 'Ulangi kata sandi', isPassword: true, icon: Icons.lock_outline_rounded, controller: controller.confirmPasswordController),
           const SizedBox(height: 20),
         ],
       ),
@@ -160,11 +160,11 @@ class RegisterView extends GetView<RegisterController> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildLabel('Alamat Domisili'),
-          _buildTextField(hint: 'Masukkan alamat lengkap...', icon: Icons.home_work_outlined, maxLines: 3),
+          _buildTextField(hint: 'Masukkan alamat lengkap...', icon: Icons.home_work_outlined, maxLines: 3, controller: controller.addressController),
           const SizedBox(height: 24),
           
           _buildLabel('Kontak Darurat'),
-          _buildTextField(hint: 'Nomor HP - Nama', icon: Icons.contact_phone_outlined),
+          _buildTextField(hint: 'Nomor HP - Nama', icon: Icons.contact_phone_outlined, controller: controller.emergencyContactController),
           
           const SizedBox(height: 30),
           
@@ -216,19 +216,6 @@ class RegisterView extends GetView<RegisterController> {
                   color: const Color(0xFF334155),
                 ),
               ),
-              ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.gps_fixed_rounded, size: 12),
-                label: const Text('Gunakan GPS'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2563EB).withOpacity(0.1),
-                  foregroundColor: const Color(0xFF2563EB),
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  textStyle: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.bold),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Color(0xFF2563EB), width: 1)),
-                ),
-              ),
             ],
           ),
         ),
@@ -239,26 +226,80 @@ class RegisterView extends GetView<RegisterController> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(18),
-              child: FlutterMap(
-                options: const MapOptions(
-                  initialCenter: LatLng(-6.3012, 107.3054),
-                  initialZoom: 15,
-                ),
+              child: Stack(
                 children: [
-                  TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.watersense.app',
-                  ),
-                  const MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: LatLng(-6.3012, 107.3054),
-                        child: Icon(Icons.location_on_rounded, color: Color(0xFFEF4444), size: 38),
+                  Obx(() => FlutterMap(
+                    mapController: controller.mapController,
+                    options: MapOptions(
+                      initialCenter: LatLng(controller.latitude.value, controller.longitude.value),
+                      initialZoom: 15,
+                      onTap: (tapPosition, point) => controller.updateLocation(point),
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.watersense.app',
+                      ),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: LatLng(controller.latitude.value, controller.longitude.value),
+                            alignment: Alignment.bottomCenter,
+                            child: const Icon(Icons.location_on_rounded, color: Color(0xFFEF4444), size: 40),
+                          ),
+                        ],
                       ),
                     ],
+                  )),
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    right: 12,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          'Ketuk peta untuk geser PIN',
+                          style: GoogleFonts.plusJakartaSans(
+                            color: const Color(0xFF2563EB),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 12,
+                    bottom: 12,
+                    child: FloatingActionButton.small(
+                      onPressed: () => controller.getCurrentLocation(),
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF2563EB),
+                      elevation: 2,
+                      child: const Icon(Icons.my_location_rounded),
+                    ),
                   ),
                 ],
               ),
@@ -270,9 +311,9 @@ class RegisterView extends GetView<RegisterController> {
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              Expanded(child: _buildLocationCard('LAT', '-6.3012')),
+              Expanded(child: Obx(() => _buildLocationCard('LAT', controller.latitude.value.toString()))),
               const SizedBox(width: 12),
-              Expanded(child: _buildLocationCard('LNG', '107.3054')),
+              Expanded(child: Obx(() => _buildLocationCard('LNG', controller.longitude.value.toString()))),
             ],
           ),
         ),
@@ -326,6 +367,7 @@ class RegisterView extends GetView<RegisterController> {
     required IconData icon, 
     int maxLines = 1,
     TextInputType? keyboardType,
+    TextEditingController? controller,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -334,6 +376,7 @@ class RegisterView extends GetView<RegisterController> {
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: TextField(
+        controller: controller,
         maxLines: maxLines,
         obscureText: isPassword,
         keyboardType: keyboardType,
@@ -349,7 +392,7 @@ class RegisterView extends GetView<RegisterController> {
           ),
           contentPadding: EdgeInsets.symmetric(
             horizontal: 14, 
-            vertical: maxLines > 1 ? 16 : 18,
+            vertical: maxLines > 1 ? 16 : 14,
           ),
         ),
       ),
@@ -380,28 +423,38 @@ class RegisterView extends GetView<RegisterController> {
             const SizedBox(),
           
           ElevatedButton(
-            onPressed: () => controller.nextStep(),
+            onPressed: controller.isLoading.value ? null : () => controller.nextStep(),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2563EB),
               foregroundColor: Colors.white,
               elevation: 0,
+              shadowColor: Colors.transparent,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  controller.currentStep.value == 3 ? 'Daftar' : 'Lanjut',
-                  style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                  controller.currentStep.value == 3 ? Icons.check_circle_rounded : Icons.arrow_forward_ios_rounded,
-                  size: 14,
-                ),
-              ],
-            ),
+            child: controller.isLoading.value
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        controller.currentStep.value == 3 ? 'Daftar' : 'Lanjut',
+                        style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        controller.currentStep.value == 3 ? Icons.check_circle_rounded : Icons.arrow_forward_ios_rounded,
+                        size: 14,
+                      ),
+                    ],
+                  ),
           ),
         ],
       )),

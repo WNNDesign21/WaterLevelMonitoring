@@ -60,15 +60,15 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Obx(() => Text(
-                            controller.accountName.value,
+                          Text(
+                            controller.email,
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
                               color: const Color(0xFF0F172A),
                               letterSpacing: -0.3,
                             ),
-                          )),
+                          ),
                         ],
                       ),
                     ),
@@ -108,6 +108,7 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
                 icon: Icons.lock_outline_rounded,
                 isPassword: true,
                 isVisible: controller.isPasswordVisible,
+                controller: controller.passwordController,
                 onToggle: () => controller.togglePasswordVisibility(),
               ),
               
@@ -119,6 +120,7 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
                 icon: Icons.lock_reset_rounded,
                 isPassword: true,
                 isVisible: controller.isConfirmPasswordVisible,
+                controller: controller.confirmPasswordController,
                 onToggle: () => controller.toggleConfirmPasswordVisibility(),
               ),
               
@@ -177,6 +179,7 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
     required IconData icon, 
     bool isPassword = false,
     RxBool? isVisible,
+    TextEditingController? controller,
     VoidCallback? onToggle,
   }) {
     return Container(
@@ -186,6 +189,7 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Obx(() => TextField(
+        controller: controller,
         obscureText: isPassword && !(isVisible?.value ?? false),
         textAlignVertical: TextAlignVertical.center,
         style: GoogleFonts.plusJakartaSans(
@@ -210,7 +214,7 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
             onPressed: onToggle,
           ) : null,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
       )),
     );
@@ -219,24 +223,34 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
   Widget _buildPrimaryButton({required String text, required VoidCallback onPressed}) {
     return SizedBox(
       width: double.infinity,
-      height: 58,
-      child: ElevatedButton(
-        onPressed: onPressed,
+      height: 60,
+      child: Obx(() => ElevatedButton(
+        onPressed: controller.isLoading.value ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF2563EB),
           foregroundColor: Colors.white,
           elevation: 0,
+          shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
-        child: Text(
-          text,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-            color: Colors.white,
-          ),
-        ),
-      ),
+        child: controller.isLoading.value
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Text(
+                text,
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+      )),
     );
   }
 }
