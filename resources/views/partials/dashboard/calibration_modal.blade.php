@@ -137,3 +137,59 @@
         </div>
     </div>
 </div>
+
+<script>
+    function openCalibrationModal(device) {
+        document.getElementById('input_device_slug').value = device.slug;
+        document.getElementById('input_elevation').value = device.elevation_mdpl || 14.00;
+        document.getElementById('input_sensor_to_bank').value = device.sensor_to_bank || 100;
+        document.getElementById('input_river_depth').value = device.river_depth || 100;
+        
+        const modal = document.getElementById('calibrationModal');
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        
+        if (typeof updateCalibrationVisualizer === 'function') updateCalibrationVisualizer();
+    }
+
+    function closeCalibrationModal() {
+        const modal = document.getElementById('calibrationModal');
+        modal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    }
+
+    document.getElementById('calibrationForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('saveCalibrationBtn');
+        const originalContent = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> <span>Saving...</span>';
+        
+        const formData = new FormData(this);
+        fetch('/api/device/update-config', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                alert('Konfigurasi berhasil disimpan!');
+                location.reload();
+            } else {
+                alert('Gagal: ' + (data.message || 'Kesalahan Server'));
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Terjadi kesalahan koneksi.');
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+        });
+    });
+</script>
