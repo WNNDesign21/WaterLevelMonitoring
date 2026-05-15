@@ -1,6 +1,44 @@
 @include('partials.dashboard.head')
 
+<style>
+    /* JARVIS ENTRY PROTOCOL (SYNCED FROM IT DASHBOARD) */
+    @keyframes revealFromLeft {
+        0% { opacity: 0; transform: translateX(-100px); filter: blur(20px); }
+        100% { opacity: 1; transform: translateX(0); filter: blur(0); }
+    }
+    @keyframes revealFromRight {
+        0% { opacity: 0; transform: translateX(100px); filter: blur(20px); }
+        100% { opacity: 1; transform: translateX(0); filter: blur(0); }
+    }
+    @keyframes revealFromBottom {
+        0% { opacity: 0; transform: translateY(100px); filter: blur(20px); }
+        100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+    }
+    @keyframes revealScale {
+        0% { opacity: 0; transform: scale(0.9); filter: blur(20px); }
+        100% { opacity: 1; transform: scale(1); filter: blur(0); }
+    }
+
+    .v-reveal-left, .v-reveal-right, .v-reveal-bottom, .v-reveal-scale {
+        opacity: 0;
+        animation-duration: 1.5s;
+        animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+        animation-fill-mode: forwards;
+        animation-delay: var(--delay, 0s);
+    }
+
+    body.loaded .v-reveal-left { animation-name: revealFromLeft; }
+    body.loaded .v-reveal-right { animation-name: revealFromRight; }
+    body.loaded .v-reveal-bottom { animation-name: revealFromBottom; }
+    body.loaded .v-reveal-scale { animation-name: revealScale; }
+</style>
+
 <body class="min-h-screen bg-slate-50 font-sans antialiased selection:bg-blue-200 selection:text-blue-900 relative flex items-center justify-center py-10 px-4 md:px-6">
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => { document.body.classList.add('loaded'); }, 100);
+        });
+    </script>
     <!-- Full Screen Animated Background Decor -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none">
         <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-400/20 blur-[120px] animate-pulse"></div>
@@ -8,10 +46,10 @@
     </div>
 
     <!-- Main Container -->
-    <div class="relative z-10 w-full max-w-5xl flex flex-col lg:flex-row items-stretch justify-center gap-6 lg:gap-10 v-reveal-item">
+    <div class="relative z-10 w-full max-w-5xl flex flex-col lg:flex-row items-stretch justify-center gap-6 lg:gap-10">
         
         <!-- Left Panel: Glass Branding -->
-        <div class="hidden lg:flex lg:w-5/12 items-center">
+        <div class="hidden lg:flex lg:w-5/12 items-center v-reveal-left" style="--delay: 0.2s">
             <div class="glass-panel w-full p-10 lg:p-12 rounded-[3rem] border border-white/60 shadow-2xl backdrop-blur-xl text-center space-y-8">
                 <div class="inline-flex p-5 rounded-[2.5rem] bg-white shadow-xl shadow-blue-500/10 mb-4">
                     <img src="{{ asset('assets/img/logo/WaterSenseIcon.png') }}" alt="WaterSense" class="w-16 h-16 object-contain">
@@ -36,7 +74,7 @@
         </div>
 
         <!-- Right Panel: Login Form -->
-        <div class="w-full lg:w-6/12 flex items-center justify-center">
+        <div class="w-full lg:w-6/12 flex items-center justify-center v-reveal-right" style="--delay: 0.4s">
             <div class="w-full space-y-8">
                 <!-- Mobile Logo Header -->
                 <div class="lg:hidden text-center mb-8">
