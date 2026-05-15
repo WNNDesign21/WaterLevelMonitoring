@@ -16,8 +16,8 @@
             }
 
             const loc = await locationPromise;
-            // Panggil API Internal yang baru dibuat
-            const url = `/api/weather?lat=${lat}&lon=${lng}&lang=id`;
+            // Panggil API Internal yang baru dibuat dengan URL yang dinamis
+            const url = `{{ url('/api/weather') }}?lat=${lat}&lon=${lng}&lang=id`;
             const res = await fetch(url);
             const apiData = await res.json();
 
