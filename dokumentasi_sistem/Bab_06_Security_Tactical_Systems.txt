@@ -1,0 +1,69 @@
+================================================================================
+          SENTINEL WATERSENSE: TECHNICAL DOCUMENTATION - CHAPTER 6
+                    SECURITY PROTOCOLS & TACTICAL SYSTEMS
+================================================================================
+
+[BAGIAN 1: PERTAHANAN MULTI-LAYER]
+
+6.1. Filosofi "Defense in Depth"
+Sentinel WaterSense menerapkan lapisan keamanan berlapis untuk melindungi 
+integritas data monitoring. Keamanan bukan hanya tentang password, tetapi tentang 
+keseluruhan alur data dari sensor hingga ke layar admin.
+
+6.2. Lapisan Keamanan:
+1. Physical Layer: Perlindungan fisik node sensor (Box Panel Waterproof & Gembok).
+2. Network Layer: Enkripsi data via HTTPS/SSL.
+3. Application Layer: Autentikasi Laravel & Role-Based Access Control.
+4. Database Layer: Enkripsi at-rest untuk data sensitif.
+
+[BAGIAN 2: SYSTEM KILL SWITCH (TACTICAL OVERRIDE)]
+
+2.1. Definisi Kill Switch
+Fitur "Tactical Override" yang memungkinkan IT_ADMIN_RANK untuk mematikan akses 
+publik ke dashboard secara instan jika terdeteksi anomali data atau serangan siber.
+
+2.2. Mekanisme Kerja:
+1. Admin menekan tombol "ACTIVATE KILL SWITCH" di dashboard IT.
+2. Backend mengubah nilai `system_status` di tabel konfigurasi menjadi `locked`.
+3. Seluruh rute publik (`/`, `/dashboard`, `/analytics`) dicek oleh middleware.
+4. Jika status `locked`, pengguna akan dialihkan ke halaman peringatan 
+   "SYSTEM UNDER MAINTENANCE - ACCESS RESTRICTED".
+
+[BAGIAN 3: AUTENTIKASI & MANAJEMEN AKSES]
+
+3.1. Role-Based Access Control (RBAC)
+Sistem membagi pengguna ke dalam dua rank utama:
+- IT_ADMIN_RANK: Memiliki akses ke fitur sistem (Kill Switch, User Management, 
+  System Logs, Config API).
+- ADMIN_RANK: Memiliki akses ke fitur operasional (Monitor Node, View Analytics, 
+  Manage Devices).
+
+3.2. Password Security
+Menggunakan algoritma hashing Argon2id yang direkomendasikan oleh OWASP. Setiap 
+password diberikan "Salt" unik secara otomatis oleh Laravel untuk mencegah 
+serangan Rainbow Table.
+
+[BAGIAN 4: PERLINDUNGAN API & IoT]
+
+4.1. Token Validation
+Setiap node sensor memiliki `access_token` unik. Jika sebuah node mengirimkan 
+data dengan token yang salah, server akan segera menjatuhkan koneksi dan 
+mencatat upaya akses ilegal tersebut di dalam Security Logs.
+
+4.2. Rate Limiting (Anti-Spam)
+Untuk mencegah serangan "Denial of Service" (DoS) pada sensor gateway, setiap 
+alamat IP node dibatasi hanya boleh mengirim data maksimal satu kali per detik.
+
+[BAGIAN 5: INTEGRITAS DATA (ANTI-TAMPERING)]
+
+5.1. Data Validation
+Setiap data telemetri yang masuk divalidasi jangkauannya. Misalnya, jika sensor 
+mengirimkan jarak "99999 cm" (yang tidak mungkin secara fisik), sistem akan 
+menandai data tersebut sebagai "Anomaly" dan tidak akan memasukkannya ke dalam 
+perhitungan statistik utama.
+
+5.2. Audit Trail
+Setiap tindakan administratif (menambah user, merubah lokasi node, mereset data) 
+dicatat dengan timestamp dan alamat IP pelaku. Ini memberikan akuntabilitas 
+penuh jika terjadi kesalahan manusia.
+

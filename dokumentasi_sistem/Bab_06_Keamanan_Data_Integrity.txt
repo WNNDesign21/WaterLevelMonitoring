@@ -1,0 +1,93 @@
+================================================================================
+          SENTINEL WATERSENSE: TECHNICAL DOCUMENTATION - CHAPTER 6
+                    SECURITY & DATA INTEGRITY PROTOCOLS
+                        (DEEP TECHNICAL ANALYSIS)
+================================================================================
+
+[BAGIAN 1: SYSTEM FORTRESS (MIDDLEWARE ARCHITECTURE)]
+
+6.1. The Three Layers of Protection
+Sistem ini tidak hanya mengandalkan login, melainkan menggunakan tiga lapisan 
+Middleware khusus untuk memastikan keamanan operasional:
+
+A. Layer 1: Global Lockdown (`CheckSystemLockdown.php`)
+Ini adalah "Perisai Utama" sistem.
+```php
+$lockdown = DB::table('system_settings')->where('key', 'system_lockdown')->value('value');
+if ($lockdown === '1') {
+    if (!auth()->check() || auth()->user()->role !== 'Administrator IT') {
+        abort(503, 'SYSTEM_EMERGENCY_LOCKDOWN');
+    }
+}
+```
+**Alur Kerja**: Sistem memeriksa flag di database. Jika aktif (1), seluruh 
+permintaan dari user biasa akan langsung diputus dan diarahkan ke halaman 
+503 (Red Alert), hanya user dengan role 'Administrator IT' yang bisa menembus.
+
+B. Layer 2: Account Enforcement (`ForcePasswordChange.php`)
+Memastikan tidak ada celah keamanan pada user baru.
+```php
+if (auth()->user()->must_change_password) {
+    return redirect()->route('password.change.show');
+}
+```
+**Alur Kerja**: Setiap personil baru yang didaftarkan oleh IT Admin dipaksa 
+untuk mengganti password default mereka sebelum bisa mengakses fitur lain.
+
+C. Layer 3: Role-Based Access Control (`CheckITRole.php`)
+Memastikan area administratif seperti manajemen user dan pengaturan global 
+hanya bisa diakses oleh level 'Administrator IT'.
+
+[BAGIAN 2: HARDWARE-TO-CLOUD AUTHENTICATION]
+
+6.2. Telemetry Key Validation (Slug-Based)
+Berbeda dengan web yang menggunakan sesi, hardware IoT berkomunikasi dengan 
+server menggunakan "Secret Slug".
+
+Snippet Validasi (`SensorDataController.php`):
+```php
+$request->validate([
+    'device_slug' => 'required|string|exists:devices,slug',
+]);
+```
+**Analisis Keamanan**: 
+Server tidak pernah menerima data secara anonim. Setiap paket data dari ESP8266 
+WAJIB membawa `device_slug`. Jika slug tidak terdaftar atau salah satu karakter 
+berbeda, server akan menolak data tersebut (HTTP 422), mencegah injeksi data 
+palsu dari perangkat luar.
+
+[BAGIAN 3: DATA INTEGRITY & INJECTION PREVENTION]
+
+6.3. Perlindungan terhadap Serangan Database
+Sistem Sentinel WaterSense menggunakan dua tingkat proteksi data:
+1.  **Strict Request Validation**: Setiap input dari form atau API divalidasi 
+    tipe datanya (misal: `numeric`, `string`, `exists`).
+2.  **Eloquent ORM (SQL Injection Shield)**: Seluruh query database menggunakan 
+    PDO parameter binding dari Laravel, sehingga serangan SQL Injection klasik 
+    melalui form input mustahil dilakukan.
+
+[BAGIAN 4: THE KILL-SWITCH PROTOCOL (EMERGENCY LOGIC)]
+
+6.4. Alur Kerja Penonaktifan Global
+Saat terjadi upaya peretasan atau kegagalan sensor masal, IT Admin dapat 
+mengaktifkan tombol "Kill-Switch" di IT Dashboard.
+
+Alur Teknis:
+1.  **Trigger**: IT Admin menekan tombol Lockdown.
+2.  **Database Sync**: Nilai `system_lockdown` di tabel `system_settings` 
+    berubah menjadi `1`.
+3.  **Broadcast Alert**: Sistem menyiarkan event status lockdown ke seluruh 
+    dashboard yang terbuka.
+4.  **Instant Restriction**: Middleware `CheckSystemLockdown` mulai memblokir 
+    semua rute aplikasi dalam waktu < 1 detik.
+
+[BAGIAN 5: TACTICAL AUDIT TRAIL]
+
+6.5. Log Aktivitas & Akuntabilitas
+Setiap aksi perubahan (seperti edit koordinat atau ganti status alat) dicatat 
+ke dalam tabel histori dengan mencantumkan:
+- **ID User**: Siapa yang melakukan perubahan.
+- **Aksi**: Apa yang diubah.
+- **Timestamp**: Waktu kejadian secara presisi.
+Ini memastikan transparansi penuh jika terjadi kesalahan konfigurasi oleh 
+operator.

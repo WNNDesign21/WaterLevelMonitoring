@@ -1,0 +1,129 @@
+================================================================================
+          SENTINEL WATERSENSE: TECHNICAL DOCUMENTATION - CHAPTER 5
+                   API ARCHITECTURE & MOBILE INTEGRATION
+                        (DEEP TECHNICAL ANALYSIS)
+================================================================================
+
+[BAGIAN 1: FILOSOFI DESAIN API (MOBILE FIRST)]
+
+5.1. Stateless REST & Mobile Resilience
+API Sentinel WaterSense dirancang untuk performa tinggi pada kondisi jaringan 
+buruk (Low Bandwidth).
+- **Graceful Error Handling**: Jika data sensor kosong, server mengirimkan HTTP 200 
+  dengan `data: null` alih-alih HTTP 404. Ini mencegah aplikasi Flutter 
+  mengalami *crash* saat mencoba mem-parsing data yang tidak ada.
+- **Zero-Latency Response**: Penggunaan caching pada endpoint statistik memastikan 
+  aplikasi mobile tetap responsif meskipun diakses oleh ribuan user secara bersamaan.
+
+[BAGIAN 2: ENDPOINT DEEP-DIVE (TECHNICAL SPECIFICATION)]
+
+2.1. GET `/api/devices` (Asset Intelligence)
+Endpoint ini adalah sumber data utama bagi Dashboard Mobile.
+
+Snippet Logika Controller (`SensorDataController@list`):
+```php
+$status = 'Aman';
+if ($latestData) {
+    $distToBank = $device->sensor_to_bank - $latestData->distance;
+    if ($distToBank >= 0) $status = 'Siaga 1';
+    else if ($distToBank >= -20) $status = 'Siaga 2';
+    else if ($distToBank >= -50) $status = 'Siaga 3';
+}
+```
+*Catatan Penting: API Mobile memiliki logika evaluasi status internal berbasis 
+jarak bibir sungai (Distance to Bank) untuk memberikan respon instan.*
+
+Contoh Response JSON:
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "name": "Karawang Barat 01",
+      "slug": "node-krw-01",
+      "siaga_status": "Siaga 2",
+      "latest_distance": 142.50,
+      "last_update": "2026-05-15T08:50:00Z"
+    }
+  ]
+}
+```
+
+2.2. GET `/api/notifications/active-alert` (Emergency Engine)
+Endpoint paling krusial untuk fitur *Safety* pada aplikasi Mobile.
+
+Analisis Fitur:
+- **Is Emergency**: Boolean flag untuk memicu UI berwarna merah di Flutter.
+- **Alert Tone Suggestion**: Memberikan instruksi nada suara yang harus 
+  diputar oleh smartphone.
+
+Snippet Kode (`NotificationApiController.php`):
+```php
+private function getAlertTone($status) {
+    switch ($status) {
+        case 'Siaga 1': return 'emergency_siren_heavy';
+        case 'Siaga 2': return 'warning_beep_fast';
+        default: return 'none';
+    }
+}
+```
+
+[BAGIAN 3: ALUR INTEGRASI MOBILE (FLUTTER WORKFLOW)]
+
+3.1. Polling & Sync Mechanism
+Aplikasi Flutter menggunakan pola **BLoC** atau **Provider** untuk mengelola 
+aliran data ini:
+1.  **Splash Sync**: Mengambil daftar `/devices` saat pertama kali dibuka.
+2.  **Background Service**: Memanggil `/active-alert` setiap 60 detik di latar 
+    belakang untuk memantau status bahaya.
+3.  **Real-time Push**: Jika status berubah menjadi 'Siaga 1', aplikasi akan 
+    memutar `alert_tone` yang disarankan oleh API.
+
+[BAGIAN 4: IoT DATA INGESTION (HARDWARE TO CLOUD)]
+
+4.1. POST `/api/sensor-data`
+Jalur utama masuknya data dari perangkat ESP8266.
+
+Struktur Request:
+- `device_slug`: Identifier unik hardware.
+- `distance`: Angka pembacaan ultrasonik (dalam CM).
+- `valid_count`: Integritas data sampel median.
+
+Keamanan Ingestion:
+Meskipun bersifat publik, endpoint ini dilindungi oleh validasi `exists:devices,slug` 
+dan pembatasan *rate-limiting* pada level Nginx untuk mencegah serangan DDOS 
+yang dapat membanjiri database dengan data palsu.
+
+[BAGIAN 5: ANALYTICS FOR MOBILE]
+
+5.1. GET `/api/sensor-data/stats/{slug}`
+Menyediakan data agregat harian (Min, Max, Avg) yang digunakan untuk mengisi 
+kartu informasi pada detail perangkat di aplikasi mobile. Data ini diproses 
+menggunakan query agregasi MariaDB:
+`SELECT AVG(distance) as avg, MIN(distance) as min, MAX(distance) as max...`
+
+--------------------------------------------------------------------------------
+DOKUMENTASI API INI DIRANCANG UNTUK PENGEMBANGAN MOBILE V2.0.0.
+--------------------------------------------------------------------------------
+
+[BAGIAN 6: PUSH NOTIFICATION SYSTEM]
+
+6.1. Firebase Cloud Messaging (FCM)
+Sistem backend Laravel terintegrasi dengan Firebase untuk mengirimkan notifikasi 
+instan ke HP pengguna jika level air mencapai titik kritis. 
+
+4.2. Notifikasi Lokal (Background Service)
+Aplikasi mobile menggunakan `flutter_local_notifications` untuk tetap memberikan 
+peringatan suara (alarm) meskipun aplikasi sedang ditutup, selama HP terhubung 
+ke internet.
+
+[BAGIAN 5: ANALISIS KEAMANAN API]
+
+5.1. Rate Limiting (Throttle)
+Untuk mencegah serangan DDoS atau brute force pada endpoint API, Laravel 
+membatasi maksimal 60 permintaan per menit dari satu alamat IP yang sama.
+
+5.2. Data Sanitization
+Semua input dari API melalui proses sanitasi yang ketat menggunakan Laravel 
+Request Validation untuk mencegah SQL Injection dari perangkat yang mungkin 
+telah diretas.

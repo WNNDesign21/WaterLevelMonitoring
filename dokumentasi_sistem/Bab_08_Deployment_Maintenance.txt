@@ -1,0 +1,95 @@
+================================================================================
+          SENTINEL WATERSENSE: TECHNICAL DOCUMENTATION - CHAPTER 8
+                    DEPLOYMENT & SYSTEM MAINTENANCE
+                        (DEEP TECHNICAL ANALYSIS)
+================================================================================
+
+[BAGIAN 1: INFRASTRUKTUR & SERVER PROVISIONING]
+
+8.1. Spesifikasi Server (Minimum Requirements)
+- **Operating System**: Ubuntu 22.04 LTS atau lebih tinggi.
+- **Web Server**: Nginx (Optimized for High-Concurrency).
+- **Runtime**: PHP 8.2+ dengan ekstensi (BCMath, Ctype, Fileinfo, JSON, Mbstring, 
+  OpenSSL, PDO, Tokenizer, XML).
+- **Database**: MariaDB 10.6+ (ACID Compliant).
+
+8.2. Skrip Instalasi Otomatis (`setup_vps.sh`)
+Untuk konsistensi antar lingkungan (Staging/Production), sistem dideploy 
+menggunakan skrip bash otomatis.
+
+Snippet Alur Instalasi:
+```bash
+# Update System & Install Dependencies
+sudo apt update && sudo apt upgrade -y
+sudo apt install nginx mariadb-server php8.2-fpm php8.2-mysql -y
+
+# Clone & Setup Laravel
+git clone https://github.com/WNNDesign21/WaterLevelMonitoring.git
+composer install --optimize-autoloader --no-dev
+php artisan migrate --force
+```
+
+[BAGIAN 2: KONFIGURASI WEB SERVER (NGINX & SSL)]
+
+8.3. Nginx Server Block Configuration
+Konfigurasi Nginx dirancang untuk menangani trafik telemetri IoT yang konstan.
+
+Snippet Config:
+```nginx
+server {
+    listen 80;
+    server_name water-level.karawang.go.id;
+    root /var/www/watersense/public;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+    }
+}
+```
+**Optimasi Keamanan**: Setiap instalasi diwajibkan menggunakan SSL dari Let's 
+Encrypt via `certbot` untuk mengenkripsi data telemetri yang dikirim oleh 
+perangkat IoT.
+
+[BAGIAN 3: AUTOMATED SYSTEM MAINTENANCE (CRON JOBS)]
+
+8.4. Laravel Task Scheduling
+Sentinel WaterSense memiliki tugas latar belakang yang krusial untuk menjaga 
+performa database.
+
+Jadwal Tugas (`routes/console.php`):
+- **Hourly Aggregation**: 
+  `Schedule::command('app:aggregate-water-level-history')->hourly();`
+  Menghitung data rata-rata per jam untuk grafik histori.
+- **Heartbeat Monitoring**: 
+  (Opsional) Mengecek perangkat yang tidak mengirim data selama > 15 menit dan 
+  menandainya sebagai Offline.
+
+[BAGIAN 4: HARDWARE MAINTENANCE (OVER-THE-AIR / OTA)]
+
+8.5. ElegantOTA Integration
+Salah satu keunggulan sistem ini adalah kemampuan pemeliharaan hardware tanpa 
+kunjungan fisik ke lokasi sungai.
+- **Mekanisme**: Melalui dashboard lokal pada NodeMCU, administrator dapat 
+  mengunggah file `.bin` (firmware) terbaru secara nirkabel.
+- **Keamanan**: Jalur OTA dilindungi oleh autentikasi pada level perangkat 
+  untuk mencegah injeksi firmware berbahaya.
+
+[BAGIAN 5: STRATEGI BACKUP & DISASTER RECOVERY]
+
+8.6. Database Backup (Cron Automation)
+Sistem diwajibkan melakukan backup database setiap hari pada jam 00:00 WIB.
+```bash
+mysqldump -u sentinel_user -p sentinel_db > /backups/db/sentinel_$(date +%F).sql
+```
+
+8.7. Disaster Recovery Alur:
+1.  **Server Fail**: Jika VPS utama down, IT Admin dapat melakukan *Provisioning* 
+    server baru menggunakan `setup_vps.sh`.
+2.  **Restore**: Import file `.sql` terakhir dan arahkan DNS ke IP baru.
+3.  **Sync**: Perangkat IoT akan otomatis mencoba menghubungkan ulang ke 
+    domain yang sama (Re-handshake).

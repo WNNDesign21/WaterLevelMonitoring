@@ -1,0 +1,91 @@
+================================================================================
+          SENTINEL WATERSENSE: TECHNICAL DOCUMENTATION - CHAPTER 2
+                    HARDWARE INFRASTRUCTURE & IOT DEEP-DIVE
+                             (HYPER-DETAILED EDITION)
+================================================================================
+
+[BAGIAN 1: PROFIL PERANGKAT & KOMPUTASI TEPI (EDGE COMPUTING)]
+
+Proyek Sentinel WaterSense mengimplementasikan dua profil perangkat yang disesuaikan 
+dengan tingkat kekritisan lokasi. Ini adalah bentuk implementasi Edge Computing, 
+di mana pemrosesan data dilakukan di perangkat sebelum dikirim ke cloud.
+
+2.1. Tipe A: Robust Tactical Node (Contoh: Karawang Barat)
+- Otak: ESP8266 (Wemos D1 Mini) dengan clock speed 80MHz.
+- Integritas Data: Algoritma "Robust Distance" dengan Median Filter.
+- Interface Lapangan: Dashboard lokal berbasis Web Server Port 80.
+- Protokol Update: ElegantOTA (Asynchronous Web Update).
+- Kredensial AP: "WaterSense_Node_KRWBAR01" (Pass: NodeKRWBAR@01).
+
+2.2. Tipe B: Standard Monitoring Node (Contoh: Johar)
+- Otak: NodeMCU CP2102.
+- Karakteristik: Pengiriman data cepat (Raw Data) tanpa buffer internal.
+- Heartbeat Failure System: Secara otomatis mengirimkan nilai `0.33` cm jika 
+  sensor ultrasonik mengalami "Time-out" (pantulan suara tidak kembali).
+
+[BAGIAN 2: BEDAH ALGORITMA FILTERING (ROBUST LOGIC)]
+
+2.3. Implementasi Bubble Sort & Median Filter
+Di dalam file `sensor_wifi_karawang_barat.ino`, sistem menggunakan algoritma 
+pengurutan data tradisional untuk membersihkan noise:
+```cpp
+for (int i = 0; i < samples - 1; i++) {
+  for (int j = 0; j < samples - i - 1; j++) {
+    if (distances[j] > distances[j + 1]) {
+      float temp = distances[j];
+      distances[j] = distances[j + 1];
+      distances[j + 1] = temp;
+    }
+  }
+}
+```
+Penjelasan Teknis: Dengan mengambil 5 sampel dan mengambil nilai tengahnya 
+(`distances[2]`), sistem secara otomatis membuang 2 nilai terendah dan 2 nilai 
+tertinggi (yang biasanya merupakan noise akibat riak air atau gangguan akustik).
+
+[BAGIAN 3: SISTEM ANTARMUKA LOKAL (FIELD DASHBOARD)]
+
+2.4. Glassmorphism Rendering Engine
+ESP8266 Anda bertindak sebagai mini-webserver. Dashboard lokal dibuat dengan 
+menggabungkan string HTML dan CSS langsung di dalam memori flash mikrokontroler:
+- CSS Framework (Internal): Menggunakan utilitas yang mirip dengan Tailwind 
+  untuk menciptakan efek `backdrop-filter: blur(10px)`.
+- UI Reaktivitas: Menampilkan IP Address, Status Wi-Fi, dan pembacaan 
+  sensor terakhir tanpa perlu aplikasi tambahan (cukup browser HP).
+
+[BAGIAN 4: PROTOKOL MAINTENANCE & REMOTE UPDATES]
+
+2.5. ElegantOTA Management
+ElegantOTA memungkinkan admin melakukan "Live Patching". Jika ada perubahan 
+logika pada file `.ino`, admin cukup mengakses `http://[IP-ALAT]/update`, 
+memasukkan file binari, dan perangkat akan melakukan *reflash* sendiri secara 
+otomatis tanpa kehilangan data kalibrasi.
+
+2.6. WiFiManager (Dynamic Provisioning)
+Jika alat dipindahkan ke lokasi baru dengan Wi-Fi berbeda, alat tidak perlu 
+diprogram ulang. Alat akan masuk ke mode "Config Portal" secara otomatis, 
+memungkinkan user memasukkan SSID dan Password baru via antarmuka web.
+
+[BAGIAN 5: INTEGRASI API & ERROR HANDLING]
+
+2.7. Payload Structure & Handshake
+Sistem mengirimkan data ke IP `103.172.205.35/api/sensor-data` menggunakan 
+objek `WiFiClient` dan `HTTPClient`. 
+Parameter yang dikirim:
+- `device_slug`: Identitas unik perangkat.
+- `distance`: Hasil pembacaan sensor (Float).
+- `valid_count`: Jumlah sampel yang berhasil divalidasi (5 atau 1).
+
+2.8. Visual Status Indicator
+Built-in LED (GPIO 2) bertindak sebagai "Diagnostic tool" sederhana:
+- Berkedip Cepat: Sedang mencoba terhubung ke Wi-Fi.
+- Menyala (LOW): Berhasil mengirim data ke server (HTTP 200).
+- Mati (HIGH): Gagal menjangkau server API.
+
+[BAGIAN 6: PANDUAN KALIBRASI LAPANGAN]
+
+2.9. Kalibrasi Ketinggian (Sensor to Bank)
+Penting bagi petugas untuk memastikan sensor terpasang tegak lurus (90 derajat) 
+terhadap permukaan air. Deviasi kemiringan 5 derajat saja dapat menyebabkan 
+kesalahan pembacaan hingga 2-3 cm pada jarak 2 meter.
+

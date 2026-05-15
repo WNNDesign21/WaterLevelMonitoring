@@ -1,0 +1,77 @@
+================================================================================
+          SENTINEL WATERSENSE: TECHNICAL DOCUMENTATION - CHAPTER 9
+                   OPERATIONAL SOP & SYSTEM MANAGEMENT
+                        (DEEP TECHNICAL ANALYSIS)
+================================================================================
+
+[BAGIAN 1: PROSEDUR KALIBRASI SENSOR (FIELD MANUAL)]
+
+9.1. Mekanisme Kalibrasi Visual
+Sistem menyediakan antarmuka kalibrasi cerdas (`calibration_modal.blade.php`) 
+yang memungkinkan operator menyesuaikan data fisik lapangan dengan logika sistem.
+
+Parameter Utama Kalibrasi:
+1.  **Elevasi MDPL**: Ketinggian daratan lokasi sensor di atas permukaan laut.
+2.  **Sensor to Bank**: Jarak fisik dari mata sensor ke bibir sungai (CM).
+3.  **River Depth**: Kedalaman dasar sungai di titik tersebut (CM).
+
+Langkah-langkah SOP Kalibrasi:
+1.  Buka Dashboard IT dan pilih perangkat yang akan dikalibrasi.
+2.  Masukkan nilai hasil pengukuran manual di lapangan.
+3.  Perhatikan **Real-time Visualizer** pada modal untuk memastikan proporsi 
+    jarak sudah masuk akal (Logic Check).
+4.  Klik "Simpan Konfigurasi". Sistem akan otomatis menghitung ulang nilai TMA 
+    pada seluruh dashboard (Web & Mobile) secara instan.
+
+[BAGIAN 2: PROTOKOL ESKALASI PERINGATAN DINI]
+
+9.2. Penanganan Status Siaga
+Sistem dikonfigurasi untuk memberikan respon berbeda berdasarkan tingkat bahaya:
+
+A. Level: SIAGA 3 (Waspada)
+- **Kondisi**: Air mulai mendekati bibir sungai (Threshold Siaga 3 tercapai).
+- **Aksi Operator**: Pemantauan intensif grafik tren 1 jam terakhir untuk 
+  melihat kecepatan kenaikan debit air.
+
+B. Level: SIAGA 2 (Bahaya)
+- **Kondisi**: Air meluap ke bantaran sungai.
+- **Aksi Operator**: Pastikan notifikasi Proximity Alert sudah terkirim ke 
+  user dalam radius 2.5 KM. Koordinasi dengan tim lapangan.
+
+C. Level: SIAGA 1 (Darurat/Evakuasi)
+- **Kondisi**: Air mencapai level kritis pemukiman.
+- **Aksi Operator**: Aktifkan protokol evakuasi. Gunakan fitur "Broadcast Status" 
+  pada dashboard untuk memberikan instruksi langsung ke aplikasi mobile.
+
+[BAGIAN 3: MANAJEMEN PERSONIL & AKUNTABILITAS]
+
+9.3. Siklus Hidup Akun Operator
+1.  **Registrasi**: IT Admin mendaftarkan personil baru via `it/users`.
+2.  **Security Handover**: User menerima password sementara dan **WAJIB** 
+    menggantinya saat login pertama kali (Enforced by Middleware).
+3.  **Audit Trail Monitoring**: IT Admin secara berkala memeriksa `it/users/history` 
+    untuk melihat apakah ada perubahan konfigurasi sensor yang mencurigakan atau 
+    tidak sesuai prosedur.
+
+[BAGIAN 4: PROTOKOL LOCKDOWN (SITUASI DARURAT)]
+
+9.4. Aktivasi Kill-Switch
+Tombol "Lockdown" hanya digunakan dalam kondisi:
+- Terjadi serangan siber (Brute force atau Injeksi data palsu).
+- Sensor mengalami kerusakan masal yang menyebabkan kepanikan publik (Data Anomali).
+
+Langkah Aktivasi:
+1.  Masuk ke IT Dashboard -> System Control.
+2.  Aktifkan "Emergency Lockdown".
+3.  Sistem akan segera menampilkan halaman **503_SERVICE_RESTRICTED** kepada 
+    seluruh pengguna publik, sementara tim IT melakukan perbaikan.
+
+[BAGIAN 5: PEMELIHARAAN HARDWARE RUTIN]
+
+9.5. Prosedur Check-Up Node
+- **Heartbeat Check**: Periksa status "Online" setiap pagi di dashboard.
+- **Physical Cleaning**: Pembersihan lensa sensor JSN-SR04T dari kotoran atau 
+  sarang laba-laba setiap 3 bulan untuk menjaga akurasi pembacaan.
+- **Firmware Update**: Melakukan update via ElegantOTA jika terdapat optimasi 
+  algoritma filter hardware.
+

@@ -1,0 +1,72 @@
+================================================================================
+          SENTINEL WATERSENSE: TECHNICAL DOCUMENTATION - CHAPTER 11
+                        TROUBLESHOOTING & SYSTEM FAQ
+                        (DEEP TECHNICAL ANALYSIS)
+================================================================================
+
+[BAGIAN 1: HARDWARE & IoT TROUBLESHOOTING]
+
+11.1. Status Perangkat Terdeteksi "OFFLINE"
+Gejala: Dashboard menunjukkan indikator merah pada node tertentu.
+Penyebab & Solusi:
+- **WiFi Signal Loss**: Masuk ke "WiFi Management OS" lokal perangkat. Jika 
+  RSSI di bawah -85dBm, pindahkan posisi perangkat atau gunakan penguat sinyal.
+- **Power Failure**: Periksa indikator LED pada ESP8266. Jika mati, cek catu 
+  daya/adaptor 5V.
+- **Serial Monitor Check**: Sambungkan perangkat ke laptop, jika muncul nilai 
+  `0.33` secara terus-menerus, berarti sensor ultrasonik (JSN-SR04T) gagal 
+  menerima pantulan gelombang (cek kabel Echo/Trig).
+
+11.2. Data Jittery (Nilai Melonjak Tidak Wajar)
+Penyebab: Gangguan gelombang pada permukaan air atau noise elektrik.
+Solusi: 
+- Pastikan algoritma **Median Filter (Bubble Sort)** pada file `.ino` aktif. 
+- Jika nilai tetap melompat, naikkan jumlah sampel dari 5 menjadi 10 pada 
+  variabel `MAX_SAMPLES`.
+
+[BAGIAN 2: BACKEND & API TROUBLESHOOTING]
+
+11.3. HTTP Error 422 (Unprocessable Entity)
+Gejala: Serial monitor hardware menunjukkan "Code: 422".
+Penyebab: `device_slug` yang dikirim oleh hardware tidak terdaftar di database.
+Solusi: Pastikan `deviceSlug` pada kode Arduino sama persis dengan `slug` di 
+tabel `devices` Laravel.
+
+11.4. HTTP Error 503 (Service Unavailable)
+Gejala: Dashboard tidak bisa diakses dan hanya muncul layar merah.
+Penyebab: Fitur **System Lockdown** sedang aktif.
+Solusi: Minta Administrator IT untuk menonaktifkan mode Lockdown melalui 
+dashboard IT atau ubah nilai `system_lockdown` menjadi `0` di tabel 
+`system_settings`.
+
+[BAGIAN 3: FRONTEND & ANALYTICS TROUBLESHOOTING]
+
+11.5. Grafik Histori Kosong (No Data Points)
+Gejala: Tab Analytics tidak menampilkan garis grafik.
+Penyebab: Perintah agregasi otomatis tidak berjalan di server.
+Solusi: 
+- Jalankan secara manual: `php artisan app:aggregate-water-level-history`.
+- Cek Cron Job server: Pastikan `* * * * * cd /path-to-project && php artisan schedule:run` 
+  sudah terdaftar di `crontab -e`.
+
+11.6. Peta "Black Screen" atau Tile Gagal Muat
+Penyebab: Domain `openstreetmap.org` atau Google Maps API terblokir oleh 
+firewall jaringan kantor/instansi.
+Solusi: Whitelist domain `*.openstreetmap.org` dan `*.google.com` pada firewall.
+
+[BAGIAN 4: FREQUENTLY ASKED QUESTIONS (FAQ)]
+
+Q: Berapa lama data sensor disimpan?
+A: Data mentah disimpan selama 48 jam untuk performa, sedangkan data agregat 
+(histori) disimpan selamanya di tabel `water_level_histories`.
+
+Q: Bagaimana jika saya lupa password Admin IT?
+A: Gunakan perintah terminal: `php artisan tinker` lalu jalankan 
+`User::where('role', 'Administrator IT')->first()->update(['password' => Hash::make('password_baru')]);`.
+
+Q: Apakah sistem ini bisa berjalan tanpa internet (Offline Mode)?
+A: Sistem memerlukan koneksi internet/intranet untuk mengirim data dari sensor 
+ke server, namun dashboard lokal pada tiap Node dapat diakses secara offline 
+melalui jaringan WiFi internal perangkat tersebut.
+
+

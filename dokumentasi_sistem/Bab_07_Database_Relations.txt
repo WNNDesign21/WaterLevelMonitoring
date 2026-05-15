@@ -1,0 +1,81 @@
+================================================================================
+          SENTINEL WATERSENSE: TECHNICAL DOCUMENTATION - CHAPTER 7
+                   DATABASE RELATIONS & QUERY OPTIMIZATION
+                        (DEEP TECHNICAL ANALYSIS)
+================================================================================
+
+[BAGIAN 1: THE RELATIONAL SUN (CENTRALIZED SCHEMA)]
+
+7.1. Arsitektur Database "Star-like"
+Skema database Sentinel WaterSense dirancang dengan tabel `devices` sebagai 
+pusat orbit. Seluruh data telemetri, histori, dan log peringatan berputar di 
+sekitar ID perangkat.
+
+Hubungan Entitas Utama:
+- **Device ↔ SensorData (1:N)**: Hubungan aliran data mentah. Setiap satu 
+  perangkat menghasilkan ribuan baris data per hari.
+- **Device ↔ WaterLevelHistory (1:N)**: Hubungan data agregasi untuk 
+  visualisasi analitik jangka panjang.
+- **Device ↔ NotificationLog (1:N)**: Rekam jejak setiap peringatan (Siaga 1-3) 
+  yang pernah dikirimkan oleh sistem.
+
+[BAGIAN 2: DATA LIFE CYCLE & PRUNING STRATEGY]
+
+7.2. Logika Agregasi Otomatis (`AggregateWaterLevelHistory.php`)
+Sistem menggunakan strategi "Tiered Storage" untuk menyeimbangkan antara detail 
+data dan performa database.
+
+Snippet Kode Agregasi:
+```php
+$stats = SensorData::where('device_id', $device->id)
+    ->whereBetween('created_at', [$startTime, $endTime])
+    ->selectRaw('AVG(distance) as avg_distance, MAX(distance) as max, MIN(distance) as min')
+    ->first();
+```
+
+Alur Kerja Siklus Data:
+1.  **Ingestion**: Data mentah masuk ke `sensor_data` setiap detik/menit.
+2.  **Hourly Aggregation**: Setiap jam, sistem menjalankan perintah 
+    `app:aggregate-water-level-history` untuk menghitung rata-rata, nilai min, 
+    dan max TMA dari ribuan data mentah tersebut.
+3.  **Tiered Compression**: Data hasil agregasi disimpan ke tabel 
+    `water_level_histories` yang jauh lebih ringan.
+4.  **Auto-Pruning**: Untuk menjaga stabilitas server, data mentah (`sensor_data`) 
+    yang lebih tua dari **48 jam** akan dihapus secara otomatis.
+    ```php
+    SensorData::where('created_at', '<', now()->subHours(48))->delete();
+    ```
+
+[BAGIAN 3: HIGH-PERFORMANCE INDEXING STRATEGY]
+
+7.3. Composite Indexing for Time-Series Data
+Salah satu tantangan terbesar pada sistem monitoring adalah query grafik yang 
+melambat seiring bertambahnya data. Kita memecahkannya dengan **Composite Index**.
+
+Snippet Migrasi (`add_composite_index_to_water_level_histories_table.php`):
+```php
+$table->index(['device_id', 'recorded_at'], 'idx_device_recorded_at');
+```
+
+Mengapa Indeks Komposit?
+Tanpa indeks ini, database harus memindai seluruh tabel (Full Table Scan) untuk 
+mencari data satu perangkat di jam tertentu. Dengan indeks `idx_device_recorded_at`, 
+database langsung menuju blok memori yang spesifik, memotong waktu eksekusi 
+query dari hitungan detik menjadi milidetik (Zero-Latency Rendering).
+
+[BAGIAN 4: SCHEMA AUDIT TRAIL]
+
+7.4. User Activity & Accountability
+Tabel `activity_logs` memiliki hubungan Many-to-One dengan `users`.
+- `user_id`: Menunjukkan pelaku aksi.
+- `action_type`: Kategori aksi (UPDATE_CALIBRATION, DELETE_DEVICE, dsb).
+Ini memungkinkan IT Admin untuk melakukan "Forensik Data" jika terjadi anomali 
+pengaturan alat di lapangan.
+
+[BAGIAN 5: DATA INTEGRITY CONSTRAINTS]
+
+7.5. Cascading Deletes
+Penggunaan `onDelete('cascade')` pada Foreign Keys menjamin integritas relasi. 
+Jika sebuah perangkat dihapus, seluruh data sensor dan histori terkait akan 
+dibersihkan secara otomatis, mencegah adanya "Orphan Records" yang mengotori 
+database.

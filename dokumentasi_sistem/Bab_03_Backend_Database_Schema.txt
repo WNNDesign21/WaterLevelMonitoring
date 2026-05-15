@@ -1,0 +1,104 @@
+================================================================================
+          SENTINEL WATERSENSE: TECHNICAL DOCUMENTATION - CHAPTER 3
+                   BACKEND ARCHITECTURE & DATABASE SCHEMA
+                           (DEEP TECHNICAL ANALYSIS)
+================================================================================
+
+[BAGIAN 1: THE CORE COMPUTATION ENGINE (MODEL DEVICE)]
+
+3.1. Logika Perhitungan TMA (Tinggi Muka Air) MDPL
+Sistem ini tidak hanya mengukur jarak, tetapi mengonversinya ke standar hidrologi 
+MDPL (Meter Di Atas Permukaan Laut). 
+
+Snippet Kode (`app/Models/Device.php`):
+```php
+public function calculateTma($distanceCm)
+{
+    $elevation = $this->elevation_mdpl ?? 14.00;
+    $sensorToBank = $this->sensor_to_bank ?? 100;
+    $diffMeters = ($distanceCm - $sensorToBank) / 100;
+    return $elevation - $diffMeters;
+}
+```
+
+Analisis Baris-per-Baris:
+1. `$elevation`: Mengambil titik nol lokasi (Elevasi daratan Karawang).
+2. `$sensorToBank`: Mengompensasi jarak pemasangan fisik sensor agar "nol" 
+   dimulai dari bibir sungai, bukan dari mata sensor.
+3. `$diffMeters`: Mengonversi selisih CM ke Meter.
+4. `return $elevation - $diffMeters`: Mengurangi elevasi dengan selisih jarak. 
+   Semakin kecil `$distanceCm` (air naik), maka pengurangannya semakin kecil, 
+   sehingga nilai TMA MDPL akan naik (Mendekati level bahaya).
+
+[BAGIAN 2: SMART NOTIFICATION ENGINE (SERVICE LAYER)]
+
+3.2. Logika Eskalasi & Recovery (`NotificationService.php`)
+Ini adalah "Otak Taktis" sistem. Anda tidak mengirim notifikasi setiap detik, 
+melainkan menggunakan logika cerdas:
+
+A. Logic: Escalation (Eskalasi Bahaya)
+```php
+if ($this->isWorse($currentStatus, $lastLog->status_level ?? 'Normal')) {
+    $this->sendNotification($device, $currentStatus, $tma, "IMMEDIATE_ESCALATION");
+    return;
+}
+```
+Penjelasan: Jika status berubah menjadi lebih buruk (misal dari Siaga 3 ke 
+Siaga 2), sistem akan mengabaikan cooldown dan mengirim peringatan SEKETIKA.
+
+B. Logic: Cooldown (Pencegahan Spam)
+```php
+$cooldownMinutes = $this->getCooldownMinutes($currentStatus);
+if ($lastSent->diffInMinutes(Carbon::now()) >= $cooldownMinutes) { ... }
+```
+Sistem mengatur waktu tunggu berbeda: Siaga 1 (5 menit), Siaga 2 (30 menit), 
+Siaga 3 (2 jam). Ini memastikan admin tidak dibombardir notifikasi yang sama.
+
+[BAGIAN 3: GEOSPASIAL & PROXIMITY ALERT]
+
+3.3. Geofencing via Rumus Haversine
+Fitur tercanggih di backend Anda adalah mencari user dalam radius bahaya.
+
+Snippet Kode (`NotificationService.php`):
+```php
+$nearbyUsers = \App\Models\User::whereNotNull('latitude')
+    ->get()
+    ->filter(function($user) use ($device) {
+        $distance = $this->calculateDistance($user->latitude, $user->longitude, $device->latitude, $device->longitude);
+        return $distance <= 2.5; // Radius 2.5 KM
+    });
+```
+
+Analisis Teknis Rumus Haversine:
+Sistem menghitung jarak di atas permukaan bumi yang melengkung (Spherical 
+Geometry). Nilai `$earthRadius = 6371` KM digunakan sebagai konstanta. Dengan 
+radius 2.5 KM, sistem secara cerdas hanya mengirim notifikasi kepada orang-orang 
+yang benar-benar berada di sekitar sungai yang meluap.
+
+[BAGIAN 4: REAL-TIME DATA INGESTION (API GATEWAY)]
+
+3.4. Flow Transmisi Data (`SensorDataController.php`)
+```php
+public function store(Request $request) {
+    $data = SensorData::create([...]);
+    $tma = $device->calculateTma($data->distance);
+    $notificationService->checkAndNotify($device, $tma);
+    broadcast(new SensorDataReceived($data, $device));
+}
+```
+Penjelasan Baris:
+1. Data disimpan secara permanen.
+2. TMA dihitung secara on-the-fly.
+3. Service Notifikasi dipanggil (Eskalasi/Proximity).
+4. Data disiarkan (Broadcast) ke Pusher/WebSocket agar dashboard web 
+   terupdate dalam < 100ms tanpa refresh.
+
+[BAGIAN 5: STRATEGI DATABASE (BIG DATA READY)]
+
+3.5. Composite Indexing & Historical Agregation
+Tabel `water_level_histories` dirancang dengan Index Komposit:
+- Index: `(device_id, created_at)`
+Kegunaan: Saat Anda memanggil data 24 jam terakhir untuk grafik, database tidak 
+perlu melakukan *Full Table Scan*, melainkan langsung menuju blok memori yang 
+sesuai, memastikan grafik Analytics tetap ringan meskipun data sudah jutaan baris.
+
