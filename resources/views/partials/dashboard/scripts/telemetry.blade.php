@@ -166,6 +166,6 @@
             .catch(err => console.warn('Polling error:', err));
     }
 
-    // --- AUTOMATIC TELEMETRY REFRESH CYCLE (3 SECONDS) ---
-    setInterval(pollTelemetry, 3000);
+    // --- AUTOMATIC TELEMETRY REFRESH CYCLE (5 SECONDS) ---
+    setInterval(pollTelemetry, 5000);
 </script>
