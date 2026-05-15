@@ -100,4 +100,59 @@ class WaterLevelHistoryController extends Controller
             })
         ]);
     }
+    public function export(Request $request)
+    {
+        $request->validate([
+            'device_slug' => 'required|string|exists:devices,slug',
+            'range' => 'required|string|in:daily,weekly,monthly,yearly,custom',
+            'start_date' => 'required_if:range,custom|date',
+            'end_date' => 'required_if:range,custom|date',
+        ]);
+
+        $device = Device::where('slug', $request->device_slug)->first();
+        $query = WaterLevelHistory::where('device_id', $device->id);
+
+        if ($request->range === 'daily') {
+            $query->where('recorded_at', '>=', Carbon::now()->subDay());
+        } elseif ($request->range === 'weekly') {
+            $query->where('recorded_at', '>=', Carbon::now()->subWeek());
+        } elseif ($request->range === 'monthly') {
+            $query->where('recorded_at', '>=', Carbon::now()->subMonth());
+        } elseif ($request->range === 'yearly') {
+            $query->where('recorded_at', '>=', Carbon::now()->subYear());
+        } elseif ($request->range === 'custom') {
+            $query->whereBetween('recorded_at', [
+                Carbon::parse($request->start_date)->startOfDay(),
+                Carbon::parse($request->end_date)->endOfDay()
+            ]);
+        }
+
+        $data = $query->orderBy('recorded_at', 'desc')->get();
+
+        $filename = "history_" . $device->slug . "_" . date('Ymd_His') . ".csv";
+        
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function() use ($data) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['Waktu', 'Rata-rata TMA (m)', 'Min (m)', 'Max (m)', 'Status']);
+
+            foreach ($data as $row) {
+                $status = $row->avg_tma > 1.8 ? 'SIAGA 1' : 'AMAN';
+                fputcsv($file, [
+                    $row->recorded_at,
+                    $row->avg_tma,
+                    $row->min_tma,
+                    $row->max_tma,
+                    $status
+                ]);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
 }

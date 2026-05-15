@@ -1,13 +1,7 @@
 <!-- SENTINEL WEATHER SATELLITE -->
 <script>
     window.updateWeather = async function(lat, lng) {
-        const WEATHER_KEY = "{{ config('services.openweather.key') }}";
         const locationPromise = resolveLocation(lat, lng);
-
-        if(!WEATHER_KEY || WEATHER_KEY === 'OPENWEATHER_API_KEY') {
-            updateText('#sky-desc', 'SATELLITE KEY MISSING');
-            return;
-        }
 
         try {
             const cacheKey = `sentinel_weather_${lat.toFixed(4)}_${lng.toFixed(4)}`;
@@ -22,19 +16,21 @@
             }
 
             const loc = await locationPromise;
-            const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${WEATHER_KEY}&units=metric&lang=id`;
+            // Panggil API Internal yang baru dibuat
+            const url = `/api/weather?lat=${lat}&lon=${lng}&lang=id`;
             const res = await fetch(url);
             const apiData = await res.json();
 
-            if(apiData.main) {
+            if(apiData.temp_c !== undefined) {
                 const weatherObj = {
-                    temp: apiData.main.temp,
-                    feels: apiData.main.feels_like,
-                    humidity: apiData.main.humidity,
-                    wind: apiData.wind.speed * 3.6,
-                    pressure: apiData.main.pressure,
-                    desc: apiData.weather[0].description,
-                    main: apiData.weather[0].main,
+                    temp: apiData.temp_c,
+                    feels: apiData.temp_c, // WeatherAPI simplified
+                    humidity: apiData.humidity,
+                    wind: apiData.wind_kph,
+                    pressure: 1013, // Default
+                    desc: apiData.condition.text,
+                    main: apiData.condition.text, // Will map to icons
+                    icon_url: apiData.condition.icon,
                     ts: Date.now()
                 };
                 localStorage.setItem(cacheKey, JSON.stringify({ts: Date.now(), weather: weatherObj}));

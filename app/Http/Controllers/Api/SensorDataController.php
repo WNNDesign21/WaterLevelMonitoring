@@ -143,8 +143,10 @@ class SensorDataController extends Controller
 
             return array_merge($device->toArray(), [
                 'latest_distance' => $latestData->distance ?? null,
+                'water_level' => $latestData ? round($device->calculateTma($latestData->distance), 2) : 0.00,
                 'siaga_status' => $device->status === 'online' ? $status : 'Offline',
-                'last_update' => $latestData ? $latestData->created_at->toIso8601String() : null
+                'last_update' => $latestData ? $latestData->created_at->toIso8601String() : null,
+                'updated_at' => $latestData ? $latestData->created_at->toIso8601String() : null // Add both for compatibility
             ]);
         });
 
