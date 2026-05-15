@@ -22,6 +22,7 @@
             const apiData = await res.json();
 
             if(apiData.temp_c !== undefined) {
+                const normalizedMain = normalizeWeather(apiData.condition.text);
                 const weatherObj = {
                     temp: apiData.temp_c,
                     feels: apiData.temp_c, // WeatherAPI simplified
@@ -29,7 +30,7 @@
                     wind: apiData.wind_kph,
                     pressure: 1013, // Default
                     desc: apiData.condition.text,
-                    main: apiData.condition.text, // Will map to icons
+                    main: normalizedMain, 
                     icon_url: apiData.condition.icon,
                     ts: Date.now()
                 };
@@ -39,6 +40,18 @@
         } catch (e) { 
             updateText('#sky-desc', 'SIGNAL DISTURBANCE');
         }
+    }
+
+    function normalizeWeather(text) {
+        text = text.toLowerCase();
+        if(text.includes('cerah') || text.includes('clear') || text.includes('sunny')) return 'Clear';
+        if(text.includes('awan') || text.includes('cloud') || text.includes('overcast')) return 'Clouds';
+        if(text.includes('hujan') || text.includes('rain')) return 'Rain';
+        if(text.includes('gerimis') || text.includes('drizzle')) return 'Drizzle';
+        if(text.includes('petir') || text.includes('thunder')) return 'Thunderstorm';
+        if(text.includes('salju') || text.includes('snow')) return 'Snow';
+        if(text.includes('kabut') || text.includes('fog') || text.includes('mist')) return 'Atmosphere';
+        return 'Clouds'; 
     }
 
     function applyWeatherData(w) {
@@ -57,7 +70,12 @@
             'Thunderstorm': 'bg-purple-600/20', 'Drizzle': 'bg-cyan-600/20'
         };
 
-        updateHtml('#sky-icon-main', weatherIcons[w.main] || '<i class="fa-solid fa-cloud text-slate-400"></i>');
+        let iconHtml = weatherIcons[w.main];
+        if(!iconHtml && w.icon_url) {
+            iconHtml = `<img src="${w.icon_url}" class="w-8 h-8 object-contain" alt="weather">`;
+        }
+        
+        updateHtml('#sky-icon-main', iconHtml || '<i class="fa-solid fa-cloud text-slate-400"></i>');
         updateText('#sky-temp', `${w.temp.toFixed(1)}°C`);
         updateText('#sky-feels', `${Math.round(w.feels)}°`);
         updateText('#sky-desc', w.desc.toUpperCase());
