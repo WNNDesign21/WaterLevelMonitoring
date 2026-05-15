@@ -1,42 +1,47 @@
 @include('partials.dashboard.head')
 
 <style>
-    /* JARVIS ENTRY PROTOCOL (SYNCED FROM IT DASHBOARD) */
+    /* ADVANCED HUD ASSEMBLY PROTOCOL */
     @keyframes revealFromLeft {
-        0% { opacity: 0; transform: translateX(-100px); filter: blur(20px); }
-        100% { opacity: 1; transform: translateX(0); filter: blur(0); }
+        0% { opacity: 0; transform: translateX(-150px) skewX(-10deg); filter: blur(20px); }
+        100% { opacity: 1; transform: translateX(0) skewX(0); filter: blur(0); }
     }
     @keyframes revealFromRight {
-        0% { opacity: 0; transform: translateX(100px); filter: blur(20px); }
-        100% { opacity: 1; transform: translateX(0); filter: blur(0); }
+        0% { opacity: 0; transform: translateX(150px) skewX(10deg); filter: blur(20px); }
+        100% { opacity: 1; transform: translateX(0) skewX(0); filter: blur(0); }
     }
     @keyframes revealFromBottom {
         0% { opacity: 0; transform: translateY(100px); filter: blur(20px); }
         100% { opacity: 1; transform: translateY(0); filter: blur(0); }
     }
+    @keyframes revealFromTop {
+        0% { opacity: 0; transform: translateY(-100px); filter: blur(20px); }
+        100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+    }
     @keyframes revealScale {
-        0% { opacity: 0; transform: scale(0.9); filter: blur(20px); }
+        0% { opacity: 0; transform: scale(0.5); filter: blur(20px); }
         100% { opacity: 1; transform: scale(1); filter: blur(0); }
     }
 
-    .v-reveal-left, .v-reveal-right, .v-reveal-bottom, .v-reveal-scale {
+    .v-reveal-left, .v-reveal-right, .v-reveal-bottom, .v-reveal-top, .v-reveal-scale {
         opacity: 0;
-        animation-duration: 1.5s;
-        animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+        visibility: hidden;
+        animation-duration: 1.2s;
+        animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
         animation-fill-mode: forwards;
-        animation-delay: var(--delay, 0s);
     }
 
-    body.loaded .v-reveal-left { animation-name: revealFromLeft; }
-    body.loaded .v-reveal-right { animation-name: revealFromRight; }
-    body.loaded .v-reveal-bottom { animation-name: revealFromBottom; }
-    body.loaded .v-reveal-scale { animation-name: revealScale; }
+    body.loaded .v-reveal-left { animation-name: revealFromLeft; visibility: visible; }
+    body.loaded .v-reveal-right { animation-name: revealFromRight; visibility: visible; }
+    body.loaded .v-reveal-bottom { animation-name: revealFromBottom; visibility: visible; }
+    body.loaded .v-reveal-top { animation-name: revealFromTop; visibility: visible; }
+    body.loaded .v-reveal-scale { animation-name: revealScale; visibility: visible; }
 </style>
 
 <body class="min-h-screen bg-slate-50 font-sans antialiased selection:bg-blue-200 selection:text-blue-900 relative flex items-center justify-center py-10 px-4 md:px-6">
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => { document.body.classList.add('loaded'); }, 100);
+        window.addEventListener('load', () => {
+            setTimeout(() => { document.body.classList.add('loaded'); }, 300);
         });
     </script>
     <!-- Full Screen Animated Background Decor -->
@@ -85,7 +90,7 @@
                 </div>
 
                 <div class="glass-panel w-full rounded-[2.5rem] border border-white/80 shadow-2xl p-8 lg:p-10 relative bg-white/60 backdrop-blur-2xl">
-                    <div class="mb-8">
+                    <div class="mb-8 v-reveal-top" style="animation-delay: 0.5s">
                         <h2 class="text-3xl font-black text-slate-800 tracking-tight leading-none">Akses Portal</h2>
                         <p class="text-slate-500 font-bold tracking-widest uppercase text-[9px] mt-2">Silakan masuk untuk melanjutkan proteksi</p>
                     </div>
@@ -94,18 +99,18 @@
                         @csrf
                         
                         <!-- Google SSO Button -->
-                        <a href="http://103.172.205.35.nip.io/auth/google" class="w-full flex items-center justify-center bg-white border border-slate-200 py-3.5 rounded-2xl shadow-sm hover:shadow-md hover:bg-slate-50 transition-all duration-300 group">
+                        <a href="http://103.172.205.35.nip.io/auth/google" class="w-full flex items-center justify-center bg-white border border-slate-200 py-3.5 rounded-2xl shadow-sm hover:shadow-md hover:bg-slate-50 transition-all duration-300 group v-reveal-scale" style="animation-delay: 0.7s">
                             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-4 h-4 mr-3 group-hover:scale-110 transition-transform" alt="Google">
                             <span class="text-[9px] font-black text-slate-600 uppercase tracking-widest">Sign in with Google</span>
                         </a>
 
-                        <div class="relative py-1 flex items-center">
+                        <div class="relative py-1 flex items-center v-reveal-scale" style="animation-delay: 0.8s">
                             <div class="flex-grow border-t border-slate-200/50"></div>
                             <span class="flex-shrink mx-4 text-[8px] font-black text-slate-400 uppercase tracking-widest">Atau Manual</span>
                             <div class="flex-grow border-t border-slate-200/50"></div>
                         </div>
 
-                        <div class="space-y-4">
+                        <div class="space-y-4 v-reveal-bottom" style="animation-delay: 0.9s">
                             <div>
                                 <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Email Address</label>
                                 <input type="email" name="email" value="{{ old('email') }}" required class="w-full bg-white/80 border {{ $errors->has('email') ? 'border-red-400 ring-2 ring-red-500/10' : 'border-slate-200/60' }} py-3.5 px-6 rounded-2xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" placeholder="name@example.com">
@@ -126,7 +131,7 @@
                             </div>
                         </div>
 
-                        <div class="flex justify-between items-center mt-2 ml-1">
+                        <div class="flex justify-between items-center mt-2 ml-1 v-reveal-bottom" style="animation-delay: 1s">
                             <label class="flex items-center space-x-2 cursor-pointer group">
                                 <input type="checkbox" name="remember" class="w-4 h-4 rounded border-slate-200 text-blue-600 focus:ring-blue-500/20 transition-all">
                                 <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest group-hover:text-slate-600 transition-colors">Ingat Saya</span>
@@ -134,7 +139,7 @@
                             <a href="{{ route('password.request') }}" class="text-[10px] font-black text-blue-500 uppercase tracking-widest hover:text-blue-700 transition-colors">Lupa Password?</a>
                         </div>
 
-                        <div class="pt-2 space-y-4">
+                        <div class="pt-2 space-y-4 v-reveal-bottom" style="animation-delay: 1.1s">
                             <button type="submit" class="w-full bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-[0.25em] shadow-[0_20px_40px_-15px_rgba(15,23,42,0.4)] hover:shadow-[0_20px_40px_-10px_rgba(59,130,246,0.3)] hover:-translate-y-1 hover:from-blue-600 hover:to-blue-700 transition-all duration-500 flex items-center justify-center group relative overflow-hidden">
                                 <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                                 <span class="relative z-10 flex items-center">
