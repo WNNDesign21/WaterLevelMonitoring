@@ -1,40 +1,51 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:water_level_mobile/app/core/utils/app_snackbar.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:vibration/vibration.dart';
-import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import '../../../data/providers/api_provider.dart';
-import '../../../data/providers/weather_provider.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../../data/repositories/device_repository.dart';
+// ... rest of imports
+import '../../../data/repositories/sensor_repository.dart';
+import '../../../services/alarm_service.dart';
+import '../../../services/location_service.dart';
 import '../../../services/notification_service.dart';
+import '../../../data/models/user_model.dart';
+import '../../../data/models/device_model.dart';
+import '../../settings/controllers/settings_controller.dart';
+import '../../../data/repositories/weather_repository.dart';
+import 'package:water_level_mobile/app/routes/app_pages.dart';
 
-class HomeController extends GetxController with GetSingleTickerProviderStateMixin {
-  final ApiProvider _apiProvider = Get.find<ApiProvider>();
-  final WeatherProvider _weatherProvider = Get.find<WeatherProvider>();
+class HomeController extends GetxController
+    with GetSingleTickerProviderStateMixin {
+  final DeviceRepository _deviceRepo = Get.find<DeviceRepository>();
+  final SensorRepository _sensorRepo = Get.find<SensorRepository>();
+  final AlarmService _alarmService = Get.find<AlarmService>();
+  final LocationService _locationService = Get.find<LocationService>();
+  final WeatherRepository _weatherRepo = Get.find<WeatherRepository>();
+  
   final _storage = GetStorage();
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  Timer? _siaga2Timer;
-  Timer? _siaga3Timer;
-
+  
   // ── Loading & Network ───────────────────────────────────────────
   var isLoading = true.obs;
   var isRefreshing = false.obs;
   var hasInternet = true.obs;
   var pullDistance = 0.0.obs;
   var isManualRefreshing = false.obs;
+  var isSearchingNode = false.obs;
   var scrollOffset = 0.0.obs;
+  var defaultDeviceSlug = ''.obs;
 
   // ── Device list (dropdown) ───────────────────────────────────────
-  var devices = <Map<String, dynamic>>[].obs;
+  var devices = <DeviceModel>[].obs;
   var selectedDeviceSlug = ''.obs;
   var selectedDeviceName = 'Pilih Node...'.obs;
   var selectedDeviceLocation = ''.obs;
@@ -44,6 +55,8 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
   // ── User Data ────────────────────────────────────────────────────
   var userName = 'GUEST'.obs;
   var userEmail = ''.obs;
+  var userPhotoUrl = ''.obs;
+  var isGuest = true.obs;
 
   // ── User Location & Weather ──────────────────────────────────────
   var userLat = 0.0.obs;
@@ -56,18 +69,18 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
   var validCount = 0.obs;
   var lastUpdated = ''.obs;
   var isOnline = false.obs;
-  
+
   var flowVelocity = 0.0.obs;
   var flowTrend = 0.obs;
   var sparklineData = <double>[].obs;
   var sparklineTimestamps = <DateTime>[].obs;
   var _previousWaterLevel = 0.0;
-  
+
   // ── Sensor Stats (24h) ──────────────────────────────────────────
   var avgDistance = 0.0.obs;
   var minDistance = 0.0.obs;
   var maxDistance = 0.0.obs;
-  
+
   var avgWaterLevel = 0.0.obs;
   var minWaterLevel = 0.0.obs;
   var maxWaterLevel = 0.0.obs;
@@ -93,6 +106,10 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
   var weatherWindspeed = 0.0.obs;
   var weatherHumidity = 0.obs;
   var weatherLocationName = '...'.obs;
+  
+  // ── AI Insights ──────────────────────────────────────────────────
+  var aiRecommendation = 'Memantau kondisi...'.obs;
+  var aiEta = '--'.obs;
 
   // ── Alarm ────────────────────────────────────────────────────────
   var isAlarmMuted = false.obs;
@@ -100,47 +117,48 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
   var wavePhase = 0.0.obs;
   final cityImg = Rxn<ui.Image>();
   late AnimationController _waveController;
-  Timer? _snoozeTimer;
   Timer? _dataTimer;
   Timer? _weatherTimer;
   Timer? _statusDebounceTimer;
+  Timer? _defaultNodeTimer;
+  Timer? _snoozeTimer;
   String _pendingStatus = '';
+  String _lastNotifiedDefaultStatus = '';
+  var isSiaga1Snoozed = false.obs;
+  bool _isSiaga1Acknowledged = false;
+  bool _isMonitoringStarted = false;
 
   @override
   void onInit() {
     super.onInit();
     _loadCityImg();
     _loadSavedDevice();
-    _loadUser();
-    fetchDevices();
-    _initUserLocation();
-    
+    _loadUser(); 
+    defaultDeviceSlug.value = _storage.read<String>('default_device_slug') ?? '';
+
     // Dengarkan perubahan storage secara langsung (khusus data user)
     _storage.listenKey('user', (value) {
       _loadUser();
     });
 
-    // Refresh sensor data every 5 sec
-    _dataTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (selectedDeviceSlug.value.isNotEmpty) fetchSensorData();
-    });
+    // Auto-start if already logged in
+    _checkLoginStatus();
+    
     // Animation Ticker (Smooth 60fps, synced with screen)
     _waveController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat();
-    
-    _waveController.addListener(() {
-      wavePhase.value = _waveController.value * 2 * 3.14159; // Full phase rotation
-    });
 
-    // Refresh weather every 10 min
-    _weatherTimer = Timer.periodic(const Duration(minutes: 10), (_) {
-      _fetchWeather();
+    _waveController.addListener(() {
+      wavePhase.value =
+          _waveController.value * 2 * 3.14159; // Full phase rotation
     });
 
     // Monitor Internet Connection
-    Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
+    Connectivity()
+        .onConnectivityChanged
+        .listen((List<ConnectivityResult> results) {
       if (results.contains(ConnectivityResult.none)) {
         hasInternet.value = false;
         isOnline.value = false;
@@ -152,16 +170,73 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
     });
   }
 
-  @override
-  void onClose() {
-    _waveController.dispose();
+  Future<void> _checkLoginStatus() async {
+    const secureStorage = FlutterSecureStorage();
+    final token = await secureStorage.read(key: 'token');
+    if (token != null || _storage.read('is_guest') == true) {
+      startMonitoring();
+    }
+  }
+
+  Future<void> startMonitoring() async {
+    if (_isMonitoringStarted) return;
+    _isMonitoringStarted = true;
+
+    debugPrint('DEBUG: Starting monitoring services...');
+
+    // Initial fetches - await fetchDevices to ensure location logic can find closest
+    await fetchDevices();
+    _initLocationFromProfile();
+    _fetchWeather();
+    fetchSensorStats();
+
+    _startMonitoringTimers();
+  }
+
+  void _startMonitoringTimers() {
+    // Refresh sensor data every 5 sec
+    _dataTimer?.cancel();
+    _dataTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (selectedDeviceSlug.value.isNotEmpty) fetchSensorData();
+    });
+
+    // Refresh weather every 10 min
+    _weatherTimer?.cancel();
+    _weatherTimer = Timer.periodic(const Duration(minutes: 10), (_) {
+      _fetchWeather();
+    });
+
+    // Background monitoring for Default Node (if different from selected)
+    _defaultNodeTimer?.cancel();
+    _defaultNodeTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _monitorDefaultNode();
+    });
+  }
+
+  void stopMonitoring() {
+    _isMonitoringStarted = false;
     _dataTimer?.cancel();
     _weatherTimer?.cancel();
+    _defaultNodeTimer?.cancel();
     _snoozeTimer?.cancel();
-    _statusDebounceTimer?.cancel();
-    _audioPlayer.dispose();
-    _siaga2Timer?.cancel();
-    _siaga3Timer?.cancel();
+    _dataTimer = null;
+    _weatherTimer = null;
+    _defaultNodeTimer = null;
+    _snoozeTimer = null;
+
+    // Clear state
+    devices.clear();
+    selectedDeviceSlug.value = '';
+    selectedDeviceName.value = 'Memuat...';
+    sparklineData.clear();
+
+    debugPrint('DEBUG: Monitoring services stopped.');
+  }
+
+  @override
+  void onClose() {
+    stopMonitoring();
+    _waveController.dispose();
     super.onClose();
   }
 
@@ -173,40 +248,29 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
       final ui.FrameInfo fi = await codec.getNextFrame();
       cityImg.value = fi.image;
     } catch (e) {
-      debugPrint('Error fetching sensor data: $e');
+      debugPrint('Error fetching city image: $e');
     }
   }
 
   Future<void> fetchSensorStats() async {
     if (selectedDeviceSlug.value.isEmpty) return;
     try {
-      final response = await _apiProvider.fetchSensorStats(selectedDeviceSlug.value);
-      if (response != null && response['status'] == 'success') {
-        final data = response['data'];
-        avgDistance.value = (data['avg_distance'] as num).toDouble();
-        minDistance.value = (data['min_distance'] as num).toDouble();
-        maxDistance.value = (data['max_distance'] as num).toDouble();
-        
-        // Convert to water levels
-        avgWaterLevel.value = _calculateLevel(avgDistance.value);
-        minWaterLevel.value = _calculateLevel(maxDistance.value); 
-        maxWaterLevel.value = _calculateLevel(minDistance.value);
+      final stats = await _sensorRepo.getStats(selectedDeviceSlug.value);
+      if (stats != null) {
+        avgWaterLevel.value = (stats['avg_water_level'] as num?)?.toDouble() ?? 0.0;
+        minWaterLevel.value = (stats['min_water_level'] as num?)?.toDouble() ?? 0.0;
+        maxWaterLevel.value = (stats['max_water_level'] as num?)?.toDouble() ?? 0.0;
+
+        avgDistance.value = (stats['avg_distance'] as num?)?.toDouble() ?? 0.0;
+        minDistance.value = (stats['min_distance'] as num?)?.toDouble() ?? 0.0;
+        maxDistance.value = (stats['max_distance'] as num?)?.toDouble() ?? 0.0;
       }
     } catch (e) {
       debugPrint('Error fetching stats: $e');
     }
   }
-  
-  double _calculateLevel(double dist) {
-    final bankLevelMdpl = elevationMdpl.value - (sensorToBank.value / 100.0);
-    final riverBedMdpl = bankLevelMdpl - (riverDepth.value / 100.0);
-    
-    // actual_water_height = riverDepth - (dist - sensorToBank)
-    final distToWaterFromBank = dist - sensorToBank.value;
-    final actualHeightCm = riverDepth.value - distToWaterFromBank;
-    
-    return riverBedMdpl + (actualHeightCm / 100.0);
-  }
+
+
 
   // ── Device management ────────────────────────────────────────────
 
@@ -219,47 +283,80 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
 
   void _loadUser() {
     try {
-      final user = _storage.read('user');
-      if (user != null) {
-        final String fullName = (user['name'] ?? 'USER').toString();
+      final userData = _storage.read('user');
+      if (userData != null) {
+        final user = UserModel.fromJson(userData);
+        final String fullName = user.name;
         // Ambil nama depan saja, capitalize
         String firstName = fullName.split(' ')[0];
         if (firstName.length > 12) firstName = firstName.substring(0, 12);
         userName.value = firstName.toUpperCase();
-        userEmail.value = user['email'] ?? '';
+        userEmail.value = user.email;
+        userPhotoUrl.value = user.photoUrl ?? '';
+
+        // Extract location from profile if available
+        if (user.latitude != null && user.longitude != null) {
+          userLat.value = user.latitude!;
+          userLng.value = user.longitude!;
+        }
+
+        isGuest.value = false;
         debugPrint('DEBUG: Home User Loaded - ${userName.value}');
       } else {
+        isGuest.value = true;
         userName.value = 'GUEST';
         userEmail.value = '';
+        userPhotoUrl.value = '';
         debugPrint('DEBUG: Home User is GUEST');
       }
     } catch (e) {
+      isGuest.value = true;
       userName.value = 'GUEST';
+      userPhotoUrl.value = '';
       debugPrint('Error loading user: $e');
     }
   }
 
   Future<void> fetchDevices() async {
     if (devices.isEmpty) isLoading.value = true;
-    final list = await _apiProvider.fetchDevices();
-    if (list.isNotEmpty) {
-      devices.value = list;
-      // Auto-select saved or first device
-      if (selectedDeviceSlug.value.isEmpty) {
-        _selectDevice(list.first);
-      } else {
-        final saved = list.firstWhere(
-          (d) => d['slug'] == selectedDeviceSlug.value,
-          orElse: () => list.first,
-        );
-        _selectDevice(saved);
+    try {
+      final list = await _deviceRepo.getDevices();
+      if (list.isNotEmpty) {
+        devices.assignAll(list);
+
+        // 1. Priority: User's explicitly set DEFAULT device (from Settings)
+        final preferredDefaultSlug = _storage.read<String>('default_device_slug');
+
+        if (preferredDefaultSlug != null && preferredDefaultSlug.isNotEmpty) {
+            final preferred = list.firstWhere(
+              (d) => d.slug == preferredDefaultSlug,
+              orElse: () => list.first,
+            );
+            _selectDevice(preferred);
+          debugPrint(
+              'DEBUG: Using user preferred default device: $preferredDefaultSlug');
+        }
+        // 2. Secondary Priority: Closest node based on Profile Location
+        else if (userLat.value != 0.0 && userLng.value != 0.0) {
+          _sortAndSelectClosestDevice(userLat.value, userLng.value);
+          debugPrint(
+              'DEBUG: No default set. Using closest node based on profile.');
+        }
+        // 3. Fallback: First device in the list
+        else {
+          _selectDevice(list.first);
+          debugPrint('DEBUG: Absolute fallback to first device in list.');
+        }
       }
+    } catch (e) {
+      debugPrint('Error fetching devices: $e');
+    } finally {
+      isLoading.value = false;
     }
-    isLoading.value = false;
   }
 
-  void _selectDevice(Map<String, dynamic> device) {
-    final newSlug = device['slug'] ?? '';
+  void _selectDevice(DeviceModel device) {
+    final newSlug = device.slug;
     final isNewDevice = newSlug != selectedDeviceSlug.value;
 
     // 1. Reset & Show skeleton only if it's a DIFFERENT device or first time
@@ -285,24 +382,69 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
     _resetSensorData();
 
     // 2. Set new device info
-    selectedDeviceSlug.value = device['slug'] ?? '';
-    selectedDeviceName.value = device['name'] ?? 'Node';
-    selectedDeviceLocation.value = device['location'] ?? '';
-    selectedDeviceLat.value =
-        double.tryParse(device['latitude']?.toString() ?? '0') ?? 0.0;
-    selectedDeviceLng.value =
-        double.tryParse(device['longitude']?.toString() ?? '0') ?? 0.0;
-    
+    selectedDeviceSlug.value = device.slug;
+    selectedDeviceName.value = device.name;
+    selectedDeviceLocation.value = device.location ?? '';
+    selectedDeviceLat.value = device.latitude ?? 0.0;
+    selectedDeviceLng.value = device.longitude ?? 0.0;
+
     // 3. Persist and Fetch
     _storage.write('selected_device_slug', selectedDeviceSlug.value);
-    
+
     // Fetch immediately
     fetchSensorData();
     fetchSensorStats();
     _fetchWeather();
+    _startMonitoringTimers();
   }
 
-  void onDeviceSelected(Map<String, dynamic> device) {
+  void setAsDefault(DeviceModel device) {
+    final slug = device.slug;
+    if (slug.isNotEmpty) {
+      _storage.write('default_device_slug', slug);
+      defaultDeviceSlug.value = slug;
+      
+      try {
+        final settings = Get.find<SettingsController>();
+        settings.defaultDeviceName.value = device.name;
+      } catch (_) {}
+
+      AppSnackbar.show(
+        title: 'Node Utama Disetel',
+        message: '${device.name} kini menjadi perangkat utama Anda.',
+      );
+    }
+  }
+
+  void toggleDefault(DeviceModel device) {
+    final slug = device.slug;
+    final currentDefault = _storage.read<String>('default_device_slug');
+
+    if (currentDefault == slug) {
+      // Unset/Unpin
+      _storage.remove('default_device_slug');
+      defaultDeviceSlug.value = '';
+      
+      try {
+        final settings = Get.find<SettingsController>();
+        settings.defaultDeviceName.value = 'Node Terdekat (Auto)';
+      } catch (_) {}
+
+      AppSnackbar.show(
+        title: 'Node Utama Dihapus',
+        message: 'Kembali menggunakan node terdekat secara otomatis.',
+      );
+    } else {
+      // Set/Pin
+      setAsDefault(device);
+    }
+  }
+
+  String getDefaultDeviceSlug() {
+    return _storage.read<String>('default_device_slug') ?? '';
+  }
+
+  void onDeviceSelected(DeviceModel device) {
     _selectDevice(device);
   }
 
@@ -311,60 +453,34 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
   Future<void> fetchSensorData() async {
     if (selectedDeviceSlug.value.isEmpty) return;
     try {
-      final response = await _apiProvider.fetchLatestSensorData(
-        slug: selectedDeviceSlug.value,
-      );
-      if (response != null && response['status'] == 'success') {
-        final data = response['data'];
-        distance.value =
-            double.tryParse(data['distance']?.toString() ?? '0') ?? 0.0;
-        validCount.value = int.tryParse(data['valid_count']?.toString() ?? '0') ?? 0;
-        
-        final rawDate = data['created_at']?.toString() ?? '';
-        if (rawDate.isNotEmpty) {
-          try {
-            final dt = DateTime.parse(rawDate).toLocal();
-            lastUpdated.value = DateFormat('HH:mm:ss').format(dt);
-          } catch (_) {
-            lastUpdated.value = rawDate;
-          }
+      final response = await _sensorRepo.getLatestData(selectedDeviceSlug.value);
+      if (response != null) {
+        distance.value = response.distance;
+        validCount.value = response.validCount;
+
+        if (response.createdAt != null) {
+          lastUpdated.value = DateFormat('HH:mm:ss').format(response.createdAt!.toLocal());
+          
+          // Heartbeat check
+          isOnline.value = DateTime.now().toUtc().difference(response.createdAt!).inSeconds <= 30;
         } else {
           lastUpdated.value = '-- : --';
-        }
-        
-        // Fetch stats as well
-        fetchSensorStats();
-
-        // Heartbeat check (server time is UTC)
-        bool currentlyOnline = false;
-        if (data['created_at'] != null) {
-          final lastSeen = DateTime.parse(data['created_at']);
-          currentlyOnline = DateTime.now().toUtc().difference(lastSeen).inSeconds <= 30;
-        }
-        
-        isOnline.value = currentlyOnline;
-
-        // Update calibration config from API
-        if (response['config'] != null) {
-          elevationMdpl.value = double.tryParse(
-                  response['config']['elevation_mdpl'].toString()) ??
-              14.0;
-          sensorToBank.value = double.tryParse(
-                  response['config']['sensor_to_bank'].toString()) ??
-              100.0;
-          riverDepth.value =
-              double.tryParse(response['config']['river_depth'].toString()) ??
-                  100.0;
+          isOnline.value = false;
         }
 
-        // Compute derived values ONLY if online, otherwise reset/freeze
-        if (currentlyOnline) {
+        // Update calibration config from response if available
+        if (response.elevationMdpl != null) elevationMdpl.value = response.elevationMdpl!;
+        if (response.sensorToBank != null) sensorToBank.value = response.sensorToBank!;
+        if (response.riverDepth != null) riverDepth.value = response.riverDepth!;
+
+        // Compute derived values ONLY if online
+        if (isOnline.value) {
           waterLevel.value = elevationMdpl.value - (distance.value / 100.0);
-          distanceToGround.value = sensorToBank.value - (distance.value);
+          distanceToGround.value = sensorToBank.value - distance.value;
 
           if (_previousWaterLevel > 0) {
             final delta = waterLevel.value - _previousWaterLevel;
-            flowVelocity.value = delta.abs(); 
+            flowVelocity.value = delta.abs();
             if (delta > 0.005) {
               flowTrend.value = 1;
             } else if (delta < -0.005) {
@@ -383,13 +499,16 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
             sparklineTimestamps.removeAt(0);
           }
         } else {
-          // If OFFLINE: Reset activity indicators
           _resetSensorData();
-          // We don't add to sparkline to keep the graph "frozen"
         }
 
-        _updateStatusSiaga();
+          _updateStatusSiaga();
         _updateAiEta();
+        
+        // Check if we need to re-trigger Siaga 1 modal due to snooze expiry
+        if (statusSiaga.value == 'SIAGA 1' && !isGuest.value && !isSiaga1Snoozed.value && !_isSiaga1Acknowledged) {
+           if (Get.isDialogOpen != true) _showEvacuationDialog();
+        }
       } else {
         isOnline.value = false;
         _resetSensorData();
@@ -407,11 +526,59 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
     }
   }
 
+  void _stopAllAlarms() {
+    _alarmService.stopAllAlarms();
+  }
+
   void _resetSensorData() {
     flowVelocity.value = 0.0;
     flowTrend.value = 0;
     distanceToGround.value = -999.0;
     etaOverflow.value = '---';
+  }
+
+  void _updateAiEta() {
+    final velocity = flowVelocity.value;
+    final level = waterLevel.value;
+    final status = statusSiaga.value;
+
+    if (velocity > 0 && status != 'AMAN' && status != 'OFFLINE') {
+      final remaining = 2.0 - level; // Assume 2.0m is overflow threshold
+      if (remaining > 0) {
+        // velocity is in m/sample (5s interval), so velocity/5 is m/s
+        final minutes = (remaining / (velocity / 5)) / 60;
+        if (minutes < 60) {
+          aiEta.value = '${minutes.toInt()} Menit';
+        } else if (minutes < 120) {
+          aiEta.value = '1-2 Jam';
+        } else {
+          aiEta.value = '> 2 Jam';
+        }
+      } else {
+        aiEta.value = 'MELUAP';
+      }
+    } else {
+      aiEta.value = '--';
+    }
+    
+    etaOverflow.value = aiEta.value;
+    _updateAiInsights();
+  }
+
+  void _updateAiInsights() {
+    final status = statusSiaga.value;
+    
+    if (status == 'AMAN') {
+      aiRecommendation.value = 'Kondisi air terpantau normal. Tetap waspada jika terjadi hujan deras di hulu.';
+    } else if (status == 'SIAGA 3') {
+      aiRecommendation.value = 'Kenaikan terpantau. Pastikan saluran drainase di sekitar Anda tidak tersumbat.';
+    } else if (status == 'SIAGA 2') {
+      aiRecommendation.value = 'Kondisi mulai kritis. Amankan dokumen berharga dan pantau pergerakan air secara intensif.';
+    } else if (status == 'SIAGA 1') {
+      aiRecommendation.value = 'BAHAYA! Segera lakukan evakuasi mandiri ke tempat yang lebih tinggi. Ikuti arahan petugas.';
+    } else {
+      aiRecommendation.value = 'Memantau kondisi...';
+    }
   }
 
   Future<void> onManualRefresh() async {
@@ -432,6 +599,7 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
     if (!isOnline.value) {
       statusSiaga.value = 'OFFLINE';
       statusColor.value = 0xFF64748B;
+      _isSiaga1Acknowledged = false; // Reset on offline
       return;
     }
 
@@ -450,13 +618,16 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
     } else {
       newStatus = 'AMAN';
       newColor = 0xFF22C55E;
+      _isSiaga1Acknowledged = false; // Reset when status becomes AMAN
     }
 
     // Always update color for immediate UI feedback on the gauge
     statusColor.value = newColor;
 
     // 1. INSTANT UPDATE: If currently OFFLINE, CONNECTING or switching TO OFFLINE, update immediately
-    if (statusSiaga.value == 'OFFLINE' || statusSiaga.value == 'MENYAMBUNG...' || !isOnline.value) {
+    if (statusSiaga.value == 'OFFLINE' ||
+        statusSiaga.value == 'MENYAMBUNG...' ||
+        !isOnline.value) {
       _statusDebounceTimer?.cancel();
       _statusDebounceTimer = null;
       statusSiaga.value = newStatus;
@@ -491,57 +662,107 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
     _lastNotifiedStatus = statusSiaga.value;
 
     isAlarmMuted.value = false;
-    _snoozeTimer?.cancel();
+    _alarmService.stopAllAlarms(); // Cancel any existing snooze or alarms on status change
+    
+    // Reset Acknowledge if entering Siaga 1 from another status
+    if (statusSiaga.value == 'SIAGA 1') {
+      _isSiaga1Acknowledged = false;
+      isSiaga1Snoozed.value = false;
+      _snoozeTimer?.cancel();
+    }
+
+    // GUEST TREATMENT: Only visual color update (which is done in _updateStatusSiaga)
+    // No notifications, no sound, no vibration for guests.
+    if (isGuest.value) {
+      debugPrint('DEBUG: Alert suppressed for Guest User');
+      return;
+    }
 
     // Notification
     switch (statusSiaga.value) {
       case 'SIAGA 1':
         await NotificationService.notifySiaga1();
-        await _startSiaga1Alarm();
+        await _alarmService.playSiaga1Alarm();
+        _showEvacuationDialog();
         break;
       case 'SIAGA 2':
         await NotificationService.notifySiaga2();
-        _startSiaga2PeriodicAlert();
+        _alarmService.startSiaga2Periodic(() => _alarmService.playWarningSound());
         break;
       case 'SIAGA 3':
         await NotificationService.notifySiaga3();
-        _startSiaga3PeriodicAlert();
+        _alarmService.startSiaga3Periodic(() => _alarmService.playWarningSound());
         break;
       default:
-        _stopAllAlarms();
+        _alarmService.stopAllAlarms();
     }
 
-    // Vibration
-    if (!kIsWeb && await Vibration.hasVibrator()) {
-      if (statusSiaga.value == 'SIAGA 1') {
-        Vibration.vibrate(pattern: [500, 200, 500, 200, 1000], repeat: 0);
-      } else if (statusSiaga.value == 'SIAGA 2') {
-        Vibration.vibrate(pattern: [300, 200, 300]);
-      } else if (statusSiaga.value == 'SIAGA 3') {
-        Vibration.vibrate(duration: 400);
-      }
+    _triggerVibration(statusSiaga.value);
+  }
+
+  void _triggerVibration(String status) async {
+    if (kIsWeb) return;
+    if (!await Vibration.hasVibrator()) return;
+
+    if (status == 'SIAGA 1') {
+      Vibration.vibrate(pattern: [500, 200, 500, 200, 1000], repeat: 0);
+    } else if (status == 'SIAGA 2') {
+      Vibration.vibrate(pattern: [300, 200, 300]);
+    } else if (status == 'SIAGA 3') {
+      Vibration.vibrate(duration: 400);
     }
   }
 
-  Future<void> _startSiaga1Alarm() async {
+  Future<void> _monitorDefaultNode() async {
+    if (isGuest.value) return;
+    final defSlug = defaultDeviceSlug.value;
+    if (defSlug.isEmpty || defSlug == selectedDeviceSlug.value) return;
+
     try {
-      if (kIsWeb) {
-        _audioPlayer.setReleaseMode(ReleaseMode.loop).then((_) {
-          _audioPlayer.play(AssetSource('sounds/alarm_high.mp3'));
-        });
-      } else {
-        await _audioPlayer.setReleaseMode(ReleaseMode.loop);
-        await _audioPlayer.play(AssetSource('sounds/alarm_high.mp3'));
+      final response = await _sensorRepo.getLatestData(defSlug);
+      if (response != null) {
+        // Heartbeat check (30s)
+        final isNodeOnline = DateTime.now().toUtc().difference(response.createdAt!).inSeconds <= 30;
+        if (!isNodeOnline) return;
+
+        final dist = response.distance;
+        final sensorBank = response.sensorToBank ?? 100.0;
+        final distToGround = sensorBank - dist;
+
+        String defStatus = 'AMAN';
+        if (distToGround >= 0) {
+          defStatus = 'SIAGA 1';
+        } else if (distToGround >= -20) {
+          defStatus = 'SIAGA 2';
+        } else if (distToGround >= -50) {
+          defStatus = 'SIAGA 3';
+        }
+
+        if (defStatus != 'AMAN' && defStatus != _lastNotifiedDefaultStatus) {
+          _lastNotifiedDefaultStatus = defStatus;
+          
+          // Get node name
+          final node = devices.firstWhereOrNull((d) => d.slug == defSlug);
+          final nodeName = node?.name ?? 'Node Utama';
+
+          // Background notification only (no sound/modal to avoid conflict with current view)
+          if (defStatus == 'SIAGA 1') {
+            await NotificationService.notifySiaga1(customTitle: 'BAHAYA: $nodeName');
+          } else if (defStatus == 'SIAGA 2') {
+            await NotificationService.notifySiaga2(customTitle: 'PERINGATAN: $nodeName');
+          } else if (defStatus == 'SIAGA 3') {
+            await NotificationService.notifySiaga3(customTitle: 'WASPADA: $nodeName');
+          }
+        } else if (defStatus == 'AMAN') {
+          _lastNotifiedDefaultStatus = 'AMAN';
+        }
       }
-    } catch (e) {
-      print("Audio Error (Siaga 1): $e");
-    }
-    _showEvacuationDialog();
+    } catch (_) {}
   }
 
   void _showEvacuationDialog() {
-    // Prevent modal stacking
-    if (Get.isDialogOpen == true) return;
+    // Prevent modal stacking or guest display
+    if (Get.isDialogOpen == true || isGuest.value) return;
 
     Get.dialog(
       AlertDialog(
@@ -565,160 +786,160 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(color: Colors.white70),
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                _stopAllAlarms();
-                Get.back();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.red.shade900,
-                elevation: 0,
-                shadowColor: Colors.transparent,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+          Column(
+            children: [
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    _isSiaga1Acknowledged = true;
+                    isSiaga1Snoozed.value = false;
+                    _snoozeTimer?.cancel();
+                    _stopAllAlarms();
+                    Get.back();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.red.shade900,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text(
+                    'SAYA SUDAH EVAKUASI',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w900),
+                  ),
+                ),
               ),
-              child: const Text('SAYA SUDAH EVAKUASI',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              onPressed: () {
-                _stopAllAlarms();
-                Get.back();
-                _startSnooze();
-              },
-              child: const Text('INGATKAN 5 MENIT LAGI',
-                  style: TextStyle(color: Colors.white60)),
-            ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () {
+                    _snoozeSiaga1();
+                    Get.back();
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: Text(
+                    'Ingatkan 5 Menit Lagi',
+                    style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600, color: Colors.white70),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
-      barrierDismissible: false,
     );
   }
 
-  void _startSnooze() {
+  void _snoozeSiaga1() {
+    isSiaga1Snoozed.value = true;
+    _stopAllAlarms();
+    _snoozeTimer?.cancel();
     _snoozeTimer = Timer(const Duration(minutes: 5), () {
-      if (statusSiaga.value == 'SIAGA 1') _startSiaga1Alarm();
+      isSiaga1Snoozed.value = false;
+      // Modal will be re-triggered by fetchSensorData() check
     });
-  }
-
-  void _stopAllAlarms() {
-    _audioPlayer.stop();
-    _siaga2Timer?.cancel();
-    _siaga3Timer?.cancel();
-    if (!kIsWeb) {
-      FlutterRingtonePlayer().stop();
-      Vibration.cancel();
-    }
-  }
-
-  void _startSiaga2PeriodicAlert() {
-    _siaga2Timer?.cancel();
-    _playSiaga2Sound(); // Initial play
-    // Repeat every 2 seconds
-    _siaga2Timer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (statusSiaga.value == 'SIAGA 2') {
-        _playSiaga2Sound();
-      } else {
-        timer.cancel();
-      }
-    });
-
-    Get.snackbar(
-      '⚠️ SIAGA 2',
-      'Tinggi air mendekati batas bantaran. Pantau situasi!',
-      backgroundColor: const Color(0xFFF59E0B),
-      colorText: Colors.white,
-      duration: const Duration(seconds: 5),
+    AppSnackbar.show(
+      title: 'Alarm Ditunda',
+      message: 'Peringatan akan muncul kembali dalam 5 menit.',
     );
   }
 
-  void _playSiaga2Sound() async {
-    try {
-      if (kIsWeb) {
-        // On Web, sometimes await play() or setReleaseMode can cause issues with dart:io stubs
-        _audioPlayer.setReleaseMode(ReleaseMode.release).then((_) {
-          _audioPlayer.play(AssetSource('sounds/notification_warning.mp3'));
-        });
-      } else {
-        await _audioPlayer.setReleaseMode(ReleaseMode.release);
-        await _audioPlayer.play(AssetSource('sounds/notification_warning.mp3'));
-      }
-    } catch (e) {
-      print("Audio Error (Siaga 2): $e");
-    }
-    
-    if (!kIsWeb && await Vibration.hasVibrator()) {
-      Vibration.vibrate(pattern: [300, 200, 300]);
-    }
-  }
-
-  void _startSiaga3PeriodicAlert() {
-    _siaga3Timer?.cancel();
-    _playSiaga3Sound(); // Initial play
-    // Repeat every 5 minutes (300 seconds)
-    _siaga3Timer = Timer.periodic(const Duration(minutes: 5), (timer) {
-      if (statusSiaga.value == 'SIAGA 3') {
-        _playSiaga3Sound();
-      } else {
-        timer.cancel();
-      }
-    });
-
-    Get.snackbar(
-      '📡 SIAGA 3',
-      'Air naik signifikan. Status dimonitor aktif.',
-      backgroundColor: const Color(0xFF3B82F6),
-      colorText: Colors.white,
-      duration: const Duration(seconds: 4),
+  void showGuestRestrictionModal() {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.lock_person_rounded,
+                    color: const Color(0xFF0F172A), size: 32),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Fitur Terbatas',
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Daftar atau Login untuk menikmati fitur lengkap seperti Notifikasi Otomatis, Alarm Bahaya, dan Ekspor Data Analisis.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: const Color(0xFF64748B),
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Get.back(),
+                      child: Text(
+                        'Nanti Saja',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Get.back();
+                        Get.offAllNamed(Routes.LOGIN);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0F172A),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(
+                        'Masuk Sekarang',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
-
-  void _playSiaga3Sound() async {
-    try {
-      if (!kIsWeb) {
-        FlutterRingtonePlayer().playNotification();
-        if (await Vibration.hasVibrator()) {
-          Vibration.vibrate(duration: 400);
-        }
-      } else {
-        // Fallback or silent for web if needed, or use a short sound
-        await _audioPlayer.setReleaseMode(ReleaseMode.release);
-        await _audioPlayer.play(AssetSource('sounds/notification_warning.mp3'));
-      }
-    } catch (e) {
-      print("Audio Error (Siaga 3): $e");
-    }
-  }
-
   // ── ETA Calculation ──────────────────────────────────────────────
 
-  void _updateAiEta() {
-    if (!isOnline.value) {
-      etaOverflow.value = '---';
-      return;
-    }
 
-    // distanceToGround: positive = flood, negative = safe distance (cm)
-    if (distanceToGround.value >= 0) {
-      etaOverflow.value = 'LUBER!';
-    } else if (distanceToGround.value >= -20) {
-      etaOverflow.value = '< 15 Mnt';
-    } else if (distanceToGround.value >= -50) {
-      etaOverflow.value = '< 1 Jam';
-    } else {
-      etaOverflow.value = '> 2 Jam';
-    }
-  }
 
   // ── Weather ──────────────────────────────────────────────────────
 
@@ -731,11 +952,11 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
       weatherLocationName.value = 'Lokasi tidak ditemukan';
       return;
     }
-    
+
     weatherLocationName.value = selectedDeviceLocation.value;
-    
+
     weatherLoading.value = true;
-    final data = await _weatherProvider.fetchWeather(
+    final data = await _weatherRepo.fetchWeather(
       latitude: targetLat,
       longitude: targetLng,
     );
@@ -746,7 +967,7 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
       weatherCode.value = data['weathercode'] as int;
       weatherWindspeed.value = (data['windspeed'] as num).toDouble();
       weatherHumidity.value = (data['humidity'] as num).toInt();
-      
+
       if (data['locationName'] != null) {
         final locName = data['locationName'].toString();
         weatherLocationName.value = locName.toUpperCase();
@@ -755,154 +976,217 @@ class HomeController extends GetxController with GetSingleTickerProviderStateMix
     weatherLoading.value = false;
   }
 
-  // ── User Location GPS Logic ──────────────────────────────────────
+  // ── User Location Logic ──────────────────────────────────────────
 
-  Future<void> _initUserLocation() async {
-    // 1. Load last known from storage
+  Future<void> _initLocationFromProfile() async {
+    final userData = _storage.read('user');
+    if (userData != null) {
+      final user = UserModel.fromJson(userData);
+      if (user.latitude != null && user.longitude != null) {
+        userLat.value = user.latitude!;
+        userLng.value = user.longitude!;
+        
+        final address = await _locationService.getAddressFromCoordinates(user.latitude!, user.longitude!);
+        if (address != null) userAddress.value = address;
+
+        if (selectedDeviceSlug.value.isEmpty) {
+          _sortAndSelectClosestDevice(user.latitude!, user.longitude!);
+        }
+        return;
+      }
+    }
+
     final lastLat = _storage.read<double>('last_user_lat');
     final lastLng = _storage.read<double>('last_user_lng');
-
     if (lastLat != null && lastLng != null) {
       userLat.value = lastLat;
       userLng.value = lastLng;
+      
+      final address = await _locationService.getAddressFromCoordinates(lastLat, lastLng);
+      if (address != null) userAddress.value = address;
+
+      if (selectedDeviceSlug.value.isEmpty) {
+        _sortAndSelectClosestDevice(lastLat, lastLng);
+      }
+    }
+  }
+
+  void _sortAndSelectClosestDevice(double userLat, double userLng, {bool forceSelect = false, bool isDefaultMode = false}) {
+    if (devices.isEmpty) return;
+
+    final sortedList = List<DeviceModel>.from(devices);
+    sortedList.sort((a, b) {
+      final latA = a.latitude ?? 0.0;
+      final lngA = a.longitude ?? 0.0;
+      final latB = b.latitude ?? 0.0;
+      final lngB = b.longitude ?? 0.0;
+
+      final distA = Geolocator.distanceBetween(userLat, userLng, latA, lngA);
+      final distB = Geolocator.distanceBetween(userLat, userLng, latB, lngB);
+      return distA.compareTo(distB);
+    });
+
+    devices.value = sortedList;
+    final closest = sortedList.first;
+
+    // Simpan sebagai default jika isDefaultMode aktif atau jika user belum punya default
+    if (isDefaultMode || _storage.read<String>('default_device_slug') == null) {
+      final slug = closest.slug;
+      if (slug.isNotEmpty) {
+        _storage.write('default_device_slug', slug);
+        defaultDeviceSlug.value = slug;
+        
+        // Update SettingsController name display if it exists
+        try {
+          final settings = Get.find<SettingsController>();
+          settings.defaultDeviceName.value = closest.name;
+        } catch (_) {}
+        
+        debugPrint('DEBUG: Auto-saved closest node as default: $slug');
+      }
     }
 
-    // 2. Check if GPS service is enabled
+    // Jika belum ada pilihan sesi, gunakan yang terdekat, ATAU jika dipaksa (via tombol manual)
+    if (_storage.read<String>('selected_device_slug') == null || forceSelect) {
+      _selectDevice(closest);
+    }
+  }
+
+  Future<void> _getAddressFromCoords(double lat, double lng) async {
+    final address = await _locationService.getAddressFromCoordinates(lat, lng);
+    if (address != null) userAddress.value = address;
+  }
+
+  // ── Smart Auto-Selection Logic ──────────────────────────────────
+
+  Future<void> autoSelectByProfile({bool isDefaultMode = false}) async {
+    isSearchingNode.value = true;
+    
+    // Simulate searching delay for visual feedback
+    await Future.delayed(const Duration(milliseconds: 1500));
+
+    final userData = _storage.read('user');
+    if (userData != null) {
+      final user = UserModel.fromJson(userData);
+      if (user.latitude != null && user.longitude != null) {
+        final double lat = user.latitude!;
+        final double lng = user.longitude!;
+
+        if (lat != 0.0 && lng != 0.0) {
+          userLat.value = lat;
+          userLng.value = lng;
+          await _getAddressFromCoords(lat, lng);
+          _sortAndSelectClosestDevice(lat, lng, forceSelect: true, isDefaultMode: isDefaultMode);
+          
+          isSearchingNode.value = false;
+          Get.back(); // Close bottom sheet after success
+
+          AppSnackbar.show(
+            title: 'Sinkronisasi Profil',
+            message: 'Berhasil menemukan node terdekat dari domisili Anda.',
+          );
+        } else {
+          // Fallback ke acak jika profil tidak punya koordinat
+          await selectRandomDevice(isDefaultMode: isDefaultMode);
+        }
+      } else {
+        // Fallback ke acak jika profil tidak punya koordinat
+        await selectRandomDevice(isDefaultMode: isDefaultMode);
+      }
+    } else {
+      // Fallback ke acak jika user adalah Guest
+      await selectRandomDevice(isDefaultMode: isDefaultMode);
+    }
+  }
+
+  Future<void> autoSelectByGPS({bool isDefaultMode = false}) async {
+    isSearchingNode.value = true;
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      if (lastLat != null) {
-        _showGpsDisabledDialog();
-      } else {
-        // If no last location, we must ask to enable GPS
-        _showEnableGpsPrompt();
-      }
+      // Fallback ke acak jika GPS mati
+      await selectRandomDevice(isDefaultMode: isDefaultMode);
       return;
     }
 
-    // 3. Check/Request Permission
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) return;
+      if (permission == LocationPermission.denied) {
+        // Fallback ke acak jika izin ditolak
+        await selectRandomDevice(isDefaultMode: isDefaultMode);
+        return;
+      }
     }
 
-    if (permission == LocationPermission.deniedForever) return;
+    if (permission == LocationPermission.deniedForever) {
+      AppSnackbar.show(
+        title: 'Izin Ditolak',
+        message: 'Izinkan akses lokasi melalui pengaturan aplikasi.',
+        isError: true,
+      );
+      isSearchingNode.value = false;
+      return;
+    }
 
-    // 4. Get Position (Try last known first, then current)
     try {
-      Position? lastKnown = await Geolocator.getLastKnownPosition();
-      if (lastKnown != null) {
-        _updateUserLocation(lastKnown.latitude, lastKnown.longitude);
-      }
-
       Position position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
           timeLimit: Duration(seconds: 15),
         ),
       );
-      _updateUserLocation(position.latitude, position.longitude);
-    } catch (e) {
-      debugPrint('Error getting location: $e');
-      // If we couldn't get user location, ensure we at least fetch weather for the device
-      _fetchWeather();
-    }
-  }
-
-  void _updateUserLocation(double lat, double lng) async {
-    userLat.value = lat;
-    userLng.value = lng;
-    _storage.write('last_user_lat', lat);
-    _storage.write('last_user_lng', lng);
-    
-    await _getAddressFromCoords(lat, lng);
-    _sortAndSelectClosestDevice(lat, lng);
-  }
-
-  void _sortAndSelectClosestDevice(double userLat, double userLng) {
-    if (devices.isEmpty) return;
-    
-    final sortedList = List<Map<String, dynamic>>.from(devices);
-    sortedList.sort((a, b) {
-      final latA = double.tryParse(a['latitude'].toString()) ?? 0.0;
-      final lngA = double.tryParse(a['longitude'].toString()) ?? 0.0;
-      final latB = double.tryParse(b['latitude'].toString()) ?? 0.0;
-      final lngB = double.tryParse(b['longitude'].toString()) ?? 0.0;
       
-      final distA = Geolocator.distanceBetween(userLat, userLng, latA, lngA);
-      final distB = Geolocator.distanceBetween(userLat, userLng, latB, lngB);
-      return distA.compareTo(distB);
-    });
-    
-    devices.value = sortedList;
-    
-    // Jika user belum pernah memilih device, auto select yang paling dekat
-    if (_storage.read<String>('selected_device_slug') == null) {
-      _selectDevice(sortedList.first);
-    }
-  }
+      userLat.value = position.latitude;
+      userLng.value = position.longitude;
+      
+      await _getAddressFromCoords(position.latitude, position.longitude);
+      _sortAndSelectClosestDevice(position.latitude, position.longitude, forceSelect: true, isDefaultMode: isDefaultMode);
 
-  Future<void> _getAddressFromCoords(double lat, double lng) async {
-    try {
-      List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
-      if (placemarks.isNotEmpty) {
-        final place = placemarks.first;
-        userAddress.value = '${place.subLocality ?? place.locality ?? 'Lokasi Saya'}';
-      }
+      isSearchingNode.value = false;
+      Get.back(); // Close bottom sheet after success
+
+      AppSnackbar.show(
+        title: 'Sinkronisasi GPS',
+        message: 'Berhasil menemukan node terdekat dari lokasi Anda saat ini.',
+      );
     } catch (e) {
-      debugPrint('Geocoding error: $e');
+      // Fallback ke acak jika terjadi error (misal timeout GPS)
+      await selectRandomDevice(isDefaultMode: isDefaultMode);
+    } finally {
+      isSearchingNode.value = false;
     }
   }
 
-  void _showGpsDisabledDialog() {
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(0xFF1A1D27),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('GPS Tidak Aktif',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: const Text(
-          'GPS Anda dimatikan. Apakah Anda ingin menggunakan lokasi terakhir yang tersimpan atau menyalakan GPS untuk data cuaca yang lebih akurat?',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Get.back();
-              _fetchWeather(); // Use last saved (already in userLat.value)
-            },
-            child: const Text('Gunakan Lokasi Terakhir',
-                style: TextStyle(color: Colors.white60)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Get.back();
-              await Geolocator.openLocationSettings();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4F7EF8),
-              elevation: 0,
-              shadowColor: Colors.transparent,
-            ),
-            child: const Text('Nyalakan GPS',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
+  Future<void> selectRandomDevice({bool isDefaultMode = false}) async {
+    if (devices.isEmpty) return;
 
-  void _showEnableGpsPrompt() {
-    Get.snackbar(
-      'GPS Diperlukan',
-      'Nyalakan GPS untuk mendapatkan informasi cuaca di lokasi Anda.',
-      mainButton: TextButton(
-        onPressed: () => Geolocator.openLocationSettings(),
-        child: const Text('SETTING', style: TextStyle(color: Colors.white)),
-      ),
-      backgroundColor: Colors.black87,
-      colorText: Colors.white,
-      snackPosition: SnackPosition.BOTTOM,
+    isSearchingNode.value = true;
+    
+    // Memberikan feedback visual seolah sedang memilih
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    final random = DateTime.now().millisecond % devices.length;
+    final device = devices[random];
+
+    onDeviceSelected(device);
+    
+    if (isDefaultMode) {
+      final slug = device.slug;
+      _storage.write('default_device_slug', slug);
+      defaultDeviceSlug.value = slug;
+      
+      try {
+        final settings = Get.find<SettingsController>();
+        settings.defaultDeviceName.value = device.name;
+      } catch (_) {}
+    }
+
+    isSearchingNode.value = false;
+    Get.back();
+
+    AppSnackbar.show(
+      title: 'Mode Eksplorasi',
+      message: 'Berhasil memilih "${device.name}" secara acak untuk Anda.',
     );
   }
 }

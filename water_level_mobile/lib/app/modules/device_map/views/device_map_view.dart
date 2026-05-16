@@ -43,100 +43,182 @@ class DeviceMapView extends GetView<DeviceMapController> {
                     userAgentPackageName: 'com.example.water_level_mobile',
                   ),
                   MarkerLayer(
-                    markers: List<Marker>.from(controller.filteredDevices.map((device) {
-                      final lat = double.tryParse(device['latitude']?.toString() ?? '0') ?? 0.0;
-                      final lng = double.tryParse(device['longitude']?.toString() ?? '0') ?? 0.0;
-                      final isSelected = controller.selectedDevice.value?['slug'] == device['slug'];
-                      final status = device['siaga_status'] ?? 'Aman';
-                      final statusColor = _getStatusColor(status);
-
-                      return Marker(
-                        point: LatLng(lat, lng),
-                        width: 120,
-                        height: 120,
-                        alignment: Alignment.center,
-                        child: GestureDetector(
-                          onTap: () {
-                            controller.selectDevice(device);
-                            controller.isSearchFocused.value = false;
-                            FocusScope.of(context).unfocus();
-                          },
-                        child: SizedBox(
-                          width: 120,
-                          height: 120,
+                    markers: [
+                      // User Location Marker
+                      if (controller.gpsLocation.value != null)
+                        Marker(
+                          point: controller.gpsLocation.value!,
+                          width: 40,
+                          height: 40,
                           child: Stack(
-                            clipBehavior: Clip.none,
                             alignment: Alignment.center,
                             children: [
-                              // Pulse + Icon Container (Always centered at 60,60)
-                              Center(
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    if (isSelected) _PulseAnimation(color: statusColor),
-                                    // Icon Container
-                                    AnimatedContainer(
-                                      duration: const Duration(milliseconds: 300),
-                                      padding: EdgeInsets.all(isSelected ? 6 : 4),
-                                      decoration: BoxDecoration(
-                                        color: isSelected ? statusColor : context.bgCard,
-                                        shape: BoxShape.circle,
-                                        boxShadow: isSelected ? [
-                                          BoxShadow(
-                                            color: statusColor.withValues(alpha: 0.5),
-                                            blurRadius: 10,
-                                            spreadRadius: 2
-                                          )
-                                        ] : null,
-                                        border: Border.all(
-                                          color: isSelected ? Colors.white : statusColor.withValues(alpha: 0.8),
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: Icon(
-                                        Icons.sensors_rounded,
-                                        color: isSelected ? Colors.white : statusColor,
-                                        size: isSelected ? 22 : 18,
-                                      ),
-                                    ),
-                                  ],
+                              Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withValues(alpha: 0.3),
+                                  shape: BoxShape.circle,
                                 ),
                               ),
-                              
-                              // Device Label (Fixed position relative to the 120x120 box)
-                              Positioned(
-                                bottom: 15, // Fixed distance from bottom of 120x120
-                                left: 0,
-                                right: 0,
-                                child: Center(
-                                  child: Container(
-                                    constraints: const BoxConstraints(maxWidth: 110),
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withValues(alpha: 0.8),
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: isSelected ? Border.all(color: Colors.white, width: 1) : null,
-                                    ),
-                                    child: Text(
-                                      device['name'] ?? '',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      textAlign: TextAlign.center,
-                                      style: GoogleFonts.inter(
-                                        color: Colors.white,
-                                        fontSize: 9,
-                                        fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
+                              Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: Colors.blue,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 2),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        ),
-                      );
-                    })),
+                      // Device Markers
+                      ...controller.filteredDevices.map((device) {
+                        final lat = device.latitude ?? 0.0;
+                        final lng = device.longitude ?? 0.0;
+                        final isSelected = controller.selectedDevice.value?.slug == device.slug;
+                        final status = device.siagaStatus ?? 'Aman';
+                        final statusColor = _getStatusColor(status);
+
+                        return Marker(
+                          point: LatLng(lat, lng),
+                          width: 120,
+                          height: 120,
+                          alignment: Alignment.center,
+                          child: GestureDetector(
+                            onTap: () {
+                              controller.selectDevice(device);
+                              controller.isSearchFocused.value = false;
+                              FocusScope.of(context).unfocus();
+                            },
+                          child: SizedBox(
+                            width: 120,
+                            height: 120,
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              alignment: Alignment.center,
+                              children: [
+                                // Pulse + Icon Container
+                                Center(
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      if (isSelected || status == 'Siaga 1') _PulseAnimation(
+                                        color: statusColor,
+                                        isCritical: status == 'Siaga 1' && !isSelected,
+                                      ),
+                                      // Icon Container
+                                      AnimatedContainer(
+                                        duration: const Duration(milliseconds: 300),
+                                        padding: EdgeInsets.all(isSelected ? 6 : 4),
+                                        decoration: BoxDecoration(
+                                          color: isSelected ? statusColor : context.bgCard,
+                                          shape: BoxShape.circle,
+                                          boxShadow: isSelected ? [
+                                            BoxShadow(
+                                              color: statusColor.withValues(alpha: 0.5),
+                                              blurRadius: 10,
+                                              spreadRadius: 2
+                                            )
+                                          ] : null,
+                                          border: Border.all(
+                                            color: isSelected ? Colors.white : statusColor.withValues(alpha: 0.8),
+                                            width: 2,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.sensors_rounded,
+                                          color: isSelected ? Colors.white : statusColor,
+                                          size: isSelected ? 22 : 18,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                
+                                // Weather Context Indicator (NEW)
+                                Positioned(
+                                  top: 15, // Disesuaikan agar lebih proporsional
+                                  right: 15,
+                                  child: Obx(() {
+                                    final homeController = Get.find<HomeController>();
+                                    final globalIcon = homeController.weatherIcon.value;
+                                    final isWeatherReady = isSelected && controller.weatherIcon.value.isNotEmpty;
+                                    final displayIcon = isWeatherReady ? controller.weatherIcon.value : globalIcon;
+                                    
+                                    return Container(
+                                      padding: const EdgeInsets.all(3),
+                                      decoration: BoxDecoration(
+                                        color: context.bgCard,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: isSelected ? statusColor : context.borderColor, 
+                                          width: isSelected ? 1.5 : 0.5
+                                        ),
+                                        boxShadow: isSelected ? [
+                                          BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4)
+                                        ] : null,
+                                      ),
+                                      child: displayIcon.isNotEmpty
+                                        ? Image.network(
+                                            displayIcon,
+                                            width: 18,
+                                            height: 18,
+                                          )
+                                        : (isSelected && controller.weatherLoading.value)
+                                          ? const SizedBox(
+                                              width: 18,
+                                              height: 18,
+                                              child: Padding(
+                                                padding: EdgeInsets.all(2),
+                                                child: CircularProgressIndicator(strokeWidth: 1.5),
+                                              ),
+                                            )
+                                          : Icon(
+                                              status == 'Aman' ? Icons.wb_sunny_rounded : Icons.umbrella_rounded,
+                                              color: status == 'Aman' ? Colors.orange : Colors.blue,
+                                              size: 18,
+                                            ),
+                                    );
+                                  }),
+                                ),
+                                
+                                // Device Label
+                                Positioned(
+                                  bottom: 15,
+                                  left: 0,
+                                  right: 0,
+                                  child: Center(
+                                    child: Container(
+                                      constraints: const BoxConstraints(maxWidth: 110),
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.8),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: isSelected ? Border.all(color: Colors.white, width: 1) : null,
+                                      ),
+                                      child: Text(
+                                        device.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.center,
+                                        style: GoogleFonts.inter(
+                                          color: Colors.white,
+                                          fontSize: 9,
+                                          fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          ),
+                        );
+                      }),
+                    ],
                   ),
                 ],
               )),
@@ -161,7 +243,7 @@ class DeviceMapView extends GetView<DeviceMapController> {
                       
                       final currentIndex = controller.selectedDevice.value == null 
                         ? -1 
-                        : controller.filteredDevices.indexWhere((d) => d['slug'] == controller.selectedDevice.value!['slug']);
+                        : controller.filteredDevices.indexWhere((d) => d.slug == controller.selectedDevice.value!.slug);
 
                       return Container(
                         padding: const EdgeInsets.all(6),
@@ -223,17 +305,17 @@ class DeviceMapView extends GetView<DeviceMapController> {
                   final device = controller.selectedDevice.value;
                   if (device == null) return const SizedBox.shrink();
                   
-                  final status = device['siaga_status'] ?? 'Aman';
+                  final status = device.siagaStatus ?? 'Aman';
                   final statusColor = _getStatusColor(status);
                   
                   // Handle TMA - fallback to 0.00 if missing
-                  final tma = device['water_level']?.toString() ?? '0.00';
+                  final tma = device.waterLevel?.toString() ?? '0.00';
                   
                   // Handle Time
                   String timeStr = '--:--';
                   try {
-                    if (device['updated_at'] != null) {
-                      final dt = DateTime.parse(device['updated_at'].toString()).toLocal();
+                    if (device.updatedAt != null) {
+                      final dt = DateTime.parse(device.updatedAt.toString()).toLocal();
                       timeStr = DateFormat('HH:mm:ss').format(dt);
                     }
                   } catch (_) {}
@@ -265,14 +347,14 @@ class DeviceMapView extends GetView<DeviceMapController> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    device['name'] ?? 'Node Device', 
+                                    device.name, 
                                     maxLines: 1, 
                                     overflow: TextOverflow.ellipsis, 
                                     style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: context.textPrimary, height: 1.2)
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    device['location'] ?? 'Unknown Location', 
+                                    device.location ?? 'Unknown Location', 
                                     maxLines: 1, 
                                     overflow: TextOverflow.ellipsis, 
                                     style: GoogleFonts.inter(fontSize: 11, color: context.textMuted)
@@ -284,7 +366,7 @@ class DeviceMapView extends GetView<DeviceMapController> {
                                       Icon(Icons.my_location_rounded, size: 10, color: context.textMuted.withValues(alpha: 0.6)),
                                       const SizedBox(width: 4),
                                       Text(
-                                        'LAT: ${_formatCoord(device['latitude'])} | LNG: ${_formatCoord(device['longitude'])}',
+                                        'LAT: ${_formatCoord(device.latitude)} | LNG: ${_formatCoord(device.longitude)}',
                                         style: GoogleFonts.rajdhani(
                                           fontSize: 10,
                                           fontWeight: FontWeight.w700,
@@ -294,6 +376,25 @@ class DeviceMapView extends GetView<DeviceMapController> {
                                       ),
                                     ],
                                   ),
+                                  const SizedBox(height: 6),
+                                  // NEW: Distance Row
+                                  Obx(() {
+                                    final gpsDist = controller.getGpsDistance(device);
+                                    final profileDist = controller.getProfileDistance(device);
+                                    
+                                    if (gpsDist == null && profileDist == null) return const SizedBox.shrink();
+                                    
+                                    return Wrap(
+                                      spacing: 8,
+                                      runSpacing: 4,
+                                      children: [
+                                        if (gpsDist != null)
+                                          _buildDistanceChip(context, Icons.gps_fixed_rounded, 'GPS', gpsDist),
+                                        if (profileDist != null)
+                                          _buildDistanceChip(context, Icons.home_rounded, 'Profile', profileDist),
+                                      ],
+                                    );
+                                  }),
                                 ],
                               ),
                             ),
@@ -374,6 +475,51 @@ class DeviceMapView extends GetView<DeviceMapController> {
                             ],
                           ),
                         ),
+
+                        // Weather Row (REFINED)
+                        const SizedBox(height: 12),
+                        Obx(() {
+                          if (controller.weatherIcon.value.isEmpty) return const SizedBox.shrink();
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: context.bgPrimary.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Image.network(
+                                  controller.weatherIcon.value,
+                                  width: 32,
+                                  height: 32,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        controller.weatherDesc.value,
+                                        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: context.textPrimary),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      // All metrics in one line
+                                      Row(
+                                        children: [
+                                          _buildWeatherTag(context, Icons.thermostat_rounded, '${controller.weatherTemp.value.toStringAsFixed(1)}°C'),
+                                          const SizedBox(width: 8),
+                                          _buildWeatherTag(context, Icons.air_rounded, '${controller.weatherWindspeed.value.toStringAsFixed(1)}km/h'),
+                                          const SizedBox(width: 8),
+                                          _buildWeatherTag(context, Icons.water_drop_outlined, '${controller.weatherHumidity.value}%'),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
                         const SizedBox(height: 20),
                         
                         // Action Buttons
@@ -504,8 +650,8 @@ class DeviceMapView extends GetView<DeviceMapController> {
                               return ListTile(
                                 dense: true,
                                 leading: Icon(Icons.sensors_rounded, size: 18, color: AppColors.accent),
-                                title: Text(device['name'] ?? '', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: context.textPrimary)),
-                                subtitle: Text(device['location'] ?? '', style: GoogleFonts.inter(fontSize: 11, color: context.textMuted)),
+                                title: Text(device.name, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: context.textPrimary)),
+                                subtitle: Text(device.location ?? '', style: GoogleFonts.inter(fontSize: 11, color: context.textMuted)),
                                 onTap: () {
                                   controller.selectDevice(device);
                                   controller.isSearchFocused.value = false;
@@ -528,6 +674,50 @@ class DeviceMapView extends GetView<DeviceMapController> {
 
   Widget _divider(BuildContext context) => Container(width: 1, height: 24, color: context.dividerColor.withValues(alpha: 0.5));
 
+  Widget _buildDistanceChip(BuildContext context, IconData icon, String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.accent.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.2), width: 0.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 8, color: AppColors.accent),
+          const SizedBox(width: 4),
+          Text(
+            '$label: ',
+            style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w500, color: AppColors.accent.withValues(alpha: 0.7)),
+          ),
+          Text(
+            value,
+            style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w900, color: AppColors.accent),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWeatherTag(BuildContext context, IconData icon, String value) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 10, color: context.textMuted),
+        const SizedBox(width: 4),
+        Text(
+          value,
+          style: GoogleFonts.rajdhani(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: context.textPrimary,
+          ),
+        ),
+      ],
+    );
+  }
+
   Color _getStatusColor(String status) {
     if (status == 'Aman') return AppColors.statusSafe;
     if (status == 'Waspada' || status == 'Siaga 3') return AppColors.statusSiaga3;
@@ -544,7 +734,8 @@ class DeviceMapView extends GetView<DeviceMapController> {
 
 class _PulseAnimation extends StatefulWidget {
   final Color color;
-  const _PulseAnimation({required this.color});
+  final bool isCritical;
+  const _PulseAnimation({required this.color, this.isCritical = false});
 
   @override
   State<_PulseAnimation> createState() => _PulseAnimationState();
@@ -558,7 +749,7 @@ class _PulseAnimationState extends State<_PulseAnimation> with SingleTickerProvi
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: Duration(seconds: widget.isCritical ? 3 : 2),
     )..repeat();
   }
 
@@ -573,12 +764,15 @@ class _PulseAnimationState extends State<_PulseAnimation> with SingleTickerProvi
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
+        final double scaleFactor = widget.isCritical ? 30 : 50;
+        final double baseSize = widget.isCritical ? 20 : 30;
+        
         return Container(
-          width: 30 + (_controller.value * 50),
-          height: 30 + (_controller.value * 50),
+          width: baseSize + (_controller.value * scaleFactor),
+          height: baseSize + (_controller.value * scaleFactor),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: widget.color.withValues(alpha: 1.0 - _controller.value),
+            color: widget.color.withValues(alpha: (widget.isCritical ? 0.4 : 1.0) - _controller.value),
           ),
         );
       },

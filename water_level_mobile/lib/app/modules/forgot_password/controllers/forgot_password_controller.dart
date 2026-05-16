@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:water_level_mobile/app/data/providers/api_provider.dart';
+import 'package:water_level_mobile/app/data/repositories/auth_repository.dart';
+import 'package:water_level_mobile/app/core/utils/app_snackbar.dart';
 
 class ForgotPasswordController extends GetxController {
-  final ApiProvider apiProvider = ApiProvider();
+  final AuthRepository _authRepo = Get.find<AuthRepository>();
   final emailController = TextEditingController();
   final isLoading = false.obs;
 
@@ -18,20 +19,20 @@ class ForgotPasswordController extends GetxController {
   Future<void> _sendResetLink(String method) async {
     final email = emailController.text.trim();
     if (email.isEmpty) {
-      Get.snackbar('Error', 'Silakan masukkan email Anda', backgroundColor: Colors.red, colorText: Colors.white);
+      AppSnackbar.show(title: 'Error', message: 'Silakan masukkan email Anda', isError: true);
       return;
     }
 
     isLoading.value = true;
     try {
-      final response = await apiProvider.forgotPassword(email, method);
+      final response = await _authRepo.forgotPassword(email, method);
       if (response['statusCode'] == 200) {
-        Get.snackbar('Sukses', response['data']['message'], backgroundColor: Colors.green, colorText: Colors.white);
+        AppSnackbar.show(title: 'Sukses', message: response['data']['message']);
       } else {
-        Get.snackbar('Gagal', response['data']['message'] ?? 'Gagal mengirim link reset', backgroundColor: Colors.red, colorText: Colors.white);
+        AppSnackbar.show(title: 'Gagal', message: response['data']['message'] ?? 'Gagal mengirim link reset', isError: true);
       }
     } catch (e) {
-      Get.snackbar('Error', 'Terjadi kesalahan koneksi', backgroundColor: Colors.red, colorText: Colors.white);
+      AppSnackbar.show(title: 'Error', message: 'Terjadi kesalahan koneksi', isError: true);
     } finally {
       isLoading.value = false;
     }

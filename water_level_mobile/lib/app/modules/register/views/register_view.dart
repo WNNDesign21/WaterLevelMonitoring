@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' hide Path;
+import '../../../core/theme/app_theme.dart';
 import '../controllers/register_controller.dart';
 
 class RegisterView extends GetView<RegisterController> {
@@ -11,12 +12,12 @@ class RegisterView extends GetView<RegisterController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.bgPrimary,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: context.bgPrimary,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF1E293B), size: 18),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: context.textPrimary, size: 18),
           onPressed: () => controller.previousStep(),
         ),
         title: Text(
@@ -24,7 +25,7 @@ class RegisterView extends GetView<RegisterController> {
           style: GoogleFonts.plusJakartaSans(
             fontSize: 16,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF0F172A),
+            color: context.textPrimary,
           ),
         ),
         centerTitle: true,
@@ -32,26 +33,26 @@ class RegisterView extends GetView<RegisterController> {
       body: Column(
         children: [
           // Step Progress Bar
-          _buildStepBar(),
+          _buildStepBar(context),
           
           Expanded(
             child: PageView(
               controller: controller.pageController,
               physics: const NeverScrollableScrollPhysics(),
               children: [
-                _buildStep1(),
-                _buildStep2(),
-                _buildStep3(),
+                _buildStep1(context),
+                _buildStep2(context),
+                _buildStep3(context),
               ],
             ),
           ),
         ],
       ),
-      bottomNavigationBar: _buildBottomNav(),
+      bottomNavigationBar: _buildBottomNav(context),
     );
   }
 
-  Widget _buildStepBar() {
+  Widget _buildStepBar(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
       child: Column(
@@ -69,8 +70,8 @@ class RegisterView extends GetView<RegisterController> {
                   height: 28,
                   decoration: BoxDecoration(
                     color: isCompleted || isActive 
-                      ? const Color(0xFF2563EB) 
-                      : const Color(0xFFF1F5F9),
+                      ? AppColors.accent 
+                      : context.borderColor,
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -81,7 +82,7 @@ class RegisterView extends GetView<RegisterController> {
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: isCompleted || isActive ? Colors.white : const Color(0xFF94A3B8),
+                            color: isCompleted || isActive ? Colors.white : context.textMuted,
                           ),
                         ),
                   ),
@@ -93,7 +94,7 @@ class RegisterView extends GetView<RegisterController> {
                 child: Container(
                   height: 2,
                   margin: const EdgeInsets.symmetric(horizontal: 4),
-                  color: const Color(0xFFF1F5F9),
+                  color: context.borderColor,
                 ),
               )
             ]).toList()..removeLast(),
@@ -104,7 +105,7 @@ class RegisterView extends GetView<RegisterController> {
             style: GoogleFonts.plusJakartaSans(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF64748B),
+              color: context.textMuted,
             ),
           )),
         ],
@@ -122,30 +123,30 @@ class RegisterView extends GetView<RegisterController> {
   }
 
   // ── Step 1 ─────────────────────────────────────────────────────────────────
-  Widget _buildStep1() {
+  Widget _buildStep1(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildLabel('Nama Lengkap'),
-          _buildTextField(hint: 'Nama lengkap Anda', icon: Icons.person_outline_rounded, controller: controller.fullNameController),
+          _buildLabel(context, 'Nama Lengkap'),
+          _buildTextField(context, hint: 'Nama lengkap Anda', icon: Icons.person_outline_rounded, controller: controller.fullNameController),
           const SizedBox(height: 16),
           
-          _buildLabel('Nomor WhatsApp'),
-          _buildTextField(hint: '0812xxxx', icon: Icons.phone_android_rounded, keyboardType: TextInputType.phone, controller: controller.whatsappController),
+          _buildLabel(context, 'Nomor WhatsApp'),
+          _buildTextField(context, hint: '0812xxxx', icon: Icons.phone_android_rounded, keyboardType: TextInputType.phone, controller: controller.whatsappController),
           const SizedBox(height: 16),
           
-          _buildLabel('Email Aktif'),
-          _buildTextField(hint: 'email@example.com', icon: Icons.alternate_email_rounded, keyboardType: TextInputType.emailAddress, controller: controller.emailController),
+          _buildLabel(context, 'Email Aktif'),
+          _buildTextField(context, hint: 'email@example.com', icon: Icons.alternate_email_rounded, keyboardType: TextInputType.emailAddress, controller: controller.emailController),
           const SizedBox(height: 16),
           
-          _buildLabel('Kata Sandi'),
-          _buildTextField(hint: 'Buat kata sandi', isPassword: true, icon: Icons.lock_outline_rounded, controller: controller.passwordController),
+          _buildLabel(context, 'Kata Sandi'),
+          _buildTextField(context, hint: 'Buat kata sandi', isPassword: true, icon: Icons.lock_outline_rounded, controller: controller.passwordController),
           const SizedBox(height: 16),
           
-          _buildLabel('Konfirmasi Sandi'),
-          _buildTextField(hint: 'Ulangi kata sandi', isPassword: true, icon: Icons.lock_outline_rounded, controller: controller.confirmPasswordController),
+          _buildLabel(context, 'Konfirmasi Sandi'),
+          _buildTextField(context, hint: 'Ulangi kata sandi', isPassword: true, icon: Icons.lock_outline_rounded, controller: controller.confirmPasswordController),
           const SizedBox(height: 20),
         ],
       ),
@@ -153,32 +154,32 @@ class RegisterView extends GetView<RegisterController> {
   }
 
   // ── Step 2 ─────────────────────────────────────────────────────────────────
-  Widget _buildStep2() {
+  Widget _buildStep2(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildLabel('Alamat Domisili'),
-          _buildTextField(hint: 'Masukkan alamat lengkap...', icon: Icons.home_work_outlined, maxLines: 3, controller: controller.addressController),
+          _buildLabel(context, 'Alamat Domisili'),
+          _buildTextField(context, hint: 'Masukkan alamat lengkap...', icon: Icons.home_work_outlined, maxLines: 3, controller: controller.addressController),
           const SizedBox(height: 24),
           
-          _buildLabel('Kontak Darurat'),
-          _buildTextField(hint: 'Nomor HP - Nama', icon: Icons.contact_phone_outlined, controller: controller.emergencyContactController),
+          _buildLabel(context, 'Kontak Darurat'),
+          _buildTextField(context, hint: 'Nomor HP - Nama', icon: Icons.contact_phone_outlined, controller: controller.emergencyContactController),
           
           const SizedBox(height: 30),
           
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFF0F7FF),
+              color: AppColors.accent.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFD0E7FF)),
+              border: Border.all(color: AppColors.accent.withValues(alpha: 0.15)),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.info_outline_rounded, color: Color(0xFF2563EB), size: 20),
+                Icon(Icons.info_outline_rounded, color: AppColors.accent, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -186,7 +187,7 @@ class RegisterView extends GetView<RegisterController> {
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1E40AF),
+                      color: AppColors.accent,
                       height: 1.4,
                     ),
                   ),
@@ -200,7 +201,7 @@ class RegisterView extends GetView<RegisterController> {
   }
 
   // ── Step 3 ─────────────────────────────────────────────────────────────────
-  Widget _buildStep3() {
+  Widget _buildStep3(BuildContext context) {
     return Column(
       children: [
         Padding(
@@ -213,7 +214,7 @@ class RegisterView extends GetView<RegisterController> {
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF334155),
+                  color: context.textPrimary,
                 ),
               ),
             ],
@@ -225,7 +226,7 @@ class RegisterView extends GetView<RegisterController> {
             margin: const EdgeInsets.symmetric(horizontal: 20),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+              border: Border.all(color: context.borderColor, width: 1.5),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(18),
@@ -239,19 +240,24 @@ class RegisterView extends GetView<RegisterController> {
                       onTap: (tapPosition, point) => controller.updateLocation(point),
                     ),
                     children: [
-                      TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      Obx(() => TileLayer(
+                        urlTemplate: controller.isSatelliteMode.value 
+                            ? 'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
+                            : 'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+                        subdomains: const ['mt0', 'mt1', 'mt2', 'mt3'],
                         userAgentPackageName: 'com.watersense.app',
-                      ),
-                      MarkerLayer(
+                      )),
+                      Obx(() => MarkerLayer(
                         markers: [
                           Marker(
                             point: LatLng(controller.latitude.value, controller.longitude.value),
+                            width: 40,
+                            height: 40,
                             alignment: Alignment.bottomCenter,
                             child: const Icon(Icons.location_on_rounded, color: Color(0xFFEF4444), size: 40),
                           ),
                         ],
-                      ),
+                      )),
                     ],
                   )),
                   Positioned(
@@ -262,13 +268,13 @@ class RegisterView extends GetView<RegisterController> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
+                          color: context.bgPrimary.withValues(alpha: 0.9),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           'Ketuk peta untuk geser PIN',
                           style: GoogleFonts.plusJakartaSans(
-                            color: const Color(0xFF2563EB),
+                            color: AppColors.accent,
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
                           ),
@@ -279,12 +285,27 @@ class RegisterView extends GetView<RegisterController> {
                   Positioned(
                     right: 12,
                     bottom: 12,
-                    child: FloatingActionButton.small(
-                      onPressed: () => controller.getCurrentLocation(),
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF2563EB),
-                      elevation: 0,
-                      child: const Icon(Icons.my_location_rounded),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        FloatingActionButton.small(
+                          onPressed: () => controller.toggleSatellite(),
+                          backgroundColor: context.bgCard,
+                          foregroundColor: AppColors.accent,
+                          elevation: 2,
+                          heroTag: 'sat_reg',
+                          child: const Icon(Icons.layers_rounded),
+                        ),
+                        const SizedBox(height: 8),
+                        FloatingActionButton.small(
+                          onPressed: () => controller.getCurrentLocation(),
+                          backgroundColor: context.bgCard,
+                          foregroundColor: AppColors.accent,
+                          elevation: 2,
+                          heroTag: 'loc_reg',
+                          child: const Icon(Icons.my_location_rounded),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -297,9 +318,9 @@ class RegisterView extends GetView<RegisterController> {
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              Expanded(child: Obx(() => _buildLocationCard('LAT', controller.latitude.value.toString()))),
+              Expanded(child: Obx(() => _buildLocationCard(context, 'LAT', controller.latitude.value.toString()))),
               const SizedBox(width: 12),
-              Expanded(child: Obx(() => _buildLocationCard('LNG', controller.longitude.value.toString()))),
+              Expanded(child: Obx(() => _buildLocationCard(context, 'LNG', controller.longitude.value.toString()))),
             ],
           ),
         ),
@@ -307,25 +328,25 @@ class RegisterView extends GetView<RegisterController> {
     );
   }
 
-  Widget _buildLocationCard(String label, String value) {
+  Widget _buildLocationCard(BuildContext context, String label, String value) {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: context.bgCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: context.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
-            style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.w800, color: const Color(0xFF94A3B8)),
+            style: GoogleFonts.plusJakartaSans(fontSize: 9, fontWeight: FontWeight.w800, color: context.textMuted),
           ),
           const SizedBox(height: 2),
           Text(
             value,
-            style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF1E293B)),
+            style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w700, color: context.textPrimary),
           ),
         ],
       ),
@@ -333,7 +354,7 @@ class RegisterView extends GetView<RegisterController> {
   }
 
   // ── Common Widgets ────────────────────────────────────────────────────────
-  Widget _buildLabel(String text) {
+  Widget _buildLabel(BuildContext context, String text) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 6),
       child: Text(
@@ -341,13 +362,13 @@ class RegisterView extends GetView<RegisterController> {
         style: GoogleFonts.plusJakartaSans(
           fontSize: 12,
           fontWeight: FontWeight.w700,
-          color: const Color(0xFF475569),
+          color: context.textMuted,
         ),
       ),
     );
   }
 
-  Widget _buildTextField({
+  Widget _buildTextField(BuildContext context, {
     required String hint, 
     bool isPassword = false, 
     required IconData icon, 
@@ -357,9 +378,9 @@ class RegisterView extends GetView<RegisterController> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: context.bgCard,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: context.borderColor),
       ),
       child: TextField(
         controller: controller,
@@ -367,14 +388,14 @@ class RegisterView extends GetView<RegisterController> {
         obscureText: isPassword,
         keyboardType: keyboardType,
         textAlignVertical: maxLines > 1 ? TextAlignVertical.top : TextAlignVertical.center,
-        style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600),
+        style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600, color: context.textPrimary),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: GoogleFonts.plusJakartaSans(fontSize: 13, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w500),
+          hintStyle: GoogleFonts.plusJakartaSans(fontSize: 13, color: context.textMuted.withValues(alpha: 0.5), fontWeight: FontWeight.w500),
           border: InputBorder.none,
           prefixIcon: Padding(
             padding: EdgeInsets.only(bottom: maxLines > 1 ? 45 : 0),
-            child: Icon(icon, size: 18, color: const Color(0xFF64748B)),
+            child: Icon(icon, size: 18, color: context.textMuted.withValues(alpha: 0.8)),
           ),
           contentPadding: EdgeInsets.symmetric(
             horizontal: 14, 
@@ -385,12 +406,12 @@ class RegisterView extends GetView<RegisterController> {
     );
   }
 
-  Widget _buildBottomNav() {
+  Widget _buildBottomNav(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 10, 24, 30),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
+        color: context.bgPrimary,
+        border: Border(top: BorderSide(color: context.borderColor)),
       ),
       child: Obx(() => Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -403,7 +424,7 @@ class RegisterView extends GetView<RegisterController> {
                 'Kembali',
                 style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold),
               ),
-              style: TextButton.styleFrom(foregroundColor: const Color(0xFF64748B), padding: EdgeInsets.zero),
+              style: TextButton.styleFrom(foregroundColor: context.textMuted, padding: EdgeInsets.zero),
             )
           else
             const SizedBox(),
@@ -411,7 +432,7 @@ class RegisterView extends GetView<RegisterController> {
           ElevatedButton(
             onPressed: controller.isLoading.value ? null : () => controller.nextStep(),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
+              backgroundColor: AppColors.accent,
               foregroundColor: Colors.white,
               elevation: 0,
               shadowColor: Colors.transparent,

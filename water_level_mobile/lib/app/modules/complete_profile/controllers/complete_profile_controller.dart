@@ -4,14 +4,21 @@ import 'package:get_storage/get_storage.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:water_level_mobile/app/data/providers/api_provider.dart';
+import 'package:water_level_mobile/app/data/repositories/auth_repository.dart';
 import 'package:water_level_mobile/app/routes/app_pages.dart';
+import 'package:water_level_mobile/app/modules/home/controllers/home_controller.dart';
+import 'package:water_level_mobile/app/core/utils/app_snackbar.dart';
 
 class CompleteProfileController extends GetxController {
-  final ApiProvider apiProvider = ApiProvider();
+  final AuthRepository _authRepo = Get.find<AuthRepository>();
   final GetStorage storage = GetStorage();
   
   final isLoading = false.obs;
+  final isSatelliteMode = false.obs;
+
+  void toggleSatellite() {
+    isSatelliteMode.value = !isSatelliteMode.value;
+  }
   final MapController mapController = MapController();
 
   final whatsappController = TextEditingController();
@@ -62,13 +69,12 @@ class CompleteProfileController extends GetxController {
     if (whatsappController.text.isEmpty || 
         addressController.text.isEmpty || 
         emergencyContactController.text.isEmpty) {
-      Get.snackbar('Error', 'Semua field harus diisi', backgroundColor: Colors.red, colorText: Colors.white);
+      AppSnackbar.show(title: 'Error', message: 'Semua field harus diisi', isError: true);
       return;
     }
 
     isLoading.value = true;
     try {
-      final token = storage.read('token');
       final data = {
         'phone': whatsappController.text.trim(),
         'address': addressController.text.trim(),
@@ -76,23 +82,29 @@ class CompleteProfileController extends GetxController {
         'longitude': longitude.value,
         'emergency_phone': emergencyContactController.text.trim(),
       };
-
-      final response = await apiProvider.completeProfile(data, token);
+      final response = await _authRepo.completeProfile(data);
       
-      if (response['statusCode'] == 200) {
+      if (response != null && response['statusCode'] == 200) {
         // Update stored user data
         storage.write('user', response['data']['user']);
+        storage.write('is_guest', false);
         
+        Get.find<HomeController>().startMonitoring();
         Get.offAllNamed(Routes.HOME);
-        Get.snackbar('Berhasil', 'Profil Anda telah dilengkapi!', backgroundColor: Colors.green, colorText: Colors.white);
+        AppSnackbar.show(title: 'Berhasil', message: 'Profil Anda telah dilengkapi!');
       } else {
-        Get.snackbar('Gagal', response['data']['message'] ?? 'Gagal melengkapi profil', backgroundColor: Colors.red, colorText: Colors.white);
+        AppSnackbar.show(title: 'Gagal', message: response['data']['message'] ?? 'Gagal melengkapi profil', isError: true);
       }
     } catch (e) {
-      Get.snackbar('Error', 'Terjadi kesalahan sistem', backgroundColor: Colors.red, colorText: Colors.white);
+      AppSnackbar.show(title: 'Error', message: 'Terjadi kesalahan sistem', isError: true);
     } finally {
       isLoading.value = false;
     }
+  }
+
+  void cancelProfile() {
+    storage.erase(); // Hapus data login yang belum lengkap
+    Get.offAllNamed(Routes.LOGIN);
   }
 
   @override

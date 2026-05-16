@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import '../../../core/theme/app_theme.dart';
 import '../controllers/edit_profile_controller.dart';
 
 class EditProfileView extends GetView<EditProfileController> {
@@ -11,12 +12,12 @@ class EditProfileView extends GetView<EditProfileController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.bgPrimary,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: context.bgPrimary,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF1E293B), size: 18),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: context.textPrimary, size: 18),
           onPressed: () => Get.back(),
         ),
         title: Text(
@@ -24,7 +25,7 @@ class EditProfileView extends GetView<EditProfileController> {
           style: GoogleFonts.plusJakartaSans(
             fontSize: 16,
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF0F172A),
+            color: context.textPrimary,
           ),
         ),
         centerTitle: true,
@@ -35,28 +36,28 @@ class EditProfileView extends GetView<EditProfileController> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildLabel('Nama Lengkap'),
-            _buildTextField(hint: 'Masukkan nama...', icon: Icons.person_outline_rounded, controller: controller.nameController),
+            _buildLabel(context, 'Nama Lengkap'),
+            _buildTextField(context, hint: 'Masukkan nama...', icon: Icons.person_outline_rounded, controller: controller.nameController),
             const SizedBox(height: 16),
 
-            _buildLabel('Nomor WhatsApp'),
-            _buildTextField(hint: '0812xxxx', icon: Icons.phone_android_rounded, keyboardType: TextInputType.phone, controller: controller.whatsappController),
+            _buildLabel(context, 'Nomor WhatsApp'),
+            _buildTextField(context, hint: '0812xxxx', icon: Icons.phone_android_rounded, keyboardType: TextInputType.phone, controller: controller.whatsappController),
             const SizedBox(height: 16),
 
-            _buildLabel('Alamat Lengkap'),
-            _buildTextField(hint: 'Jl. Contoh No. 123...', icon: Icons.home_outlined, maxLines: 3, controller: controller.addressController),
+            _buildLabel(context, 'Alamat Lengkap'),
+            _buildTextField(context, hint: 'Jl. Contoh No. 123...', icon: Icons.home_outlined, maxLines: 3, controller: controller.addressController),
             const SizedBox(height: 16),
 
-            _buildLabel('Kontak Darurat'),
-            _buildTextField(hint: '0812xxxx - Nama', icon: Icons.emergency_outlined, controller: controller.emergencyContactController),
+            _buildLabel(context, 'Kontak Darurat'),
+            _buildTextField(context, hint: '0812xxxx - Nama', icon: Icons.emergency_outlined, controller: controller.emergencyContactController),
             const SizedBox(height: 16),
 
-            _buildLabel('Lokasi Rumah (Map)'),
+            _buildLabel(context, 'Lokasi Rumah (Map)'),
             Container(
               height: 250,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+                border: Border.all(color: context.borderColor, width: 1.5),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(18),
@@ -70,19 +71,24 @@ class EditProfileView extends GetView<EditProfileController> {
                         onTap: (tapPosition, point) => controller.updateLocation(point),
                       ),
                       children: [
-                        TileLayer(
-                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        Obx(() => TileLayer(
+                          urlTemplate: controller.isSatelliteMode.value 
+                              ? 'https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}'
+                              : 'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+                          subdomains: const ['mt0', 'mt1', 'mt2', 'mt3'],
                           userAgentPackageName: 'com.watersense.app',
-                        ),
-                        MarkerLayer(
+                        )),
+                        Obx(() => MarkerLayer(
                           markers: [
                             Marker(
                               point: LatLng(controller.latitude.value, controller.longitude.value),
+                              width: 40,
+                              height: 40,
                               alignment: Alignment.bottomCenter,
                               child: const Icon(Icons.location_on_rounded, color: Color(0xFFEF4444), size: 40),
                             ),
                           ],
-                        ),
+                        )),
                       ],
                     )),
                     Positioned(
@@ -93,13 +99,13 @@ class EditProfileView extends GetView<EditProfileController> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.9),
+                            color: context.bgPrimary.withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             'Ketuk peta untuk geser PIN',
                             style: GoogleFonts.plusJakartaSans(
-                              color: const Color(0xFF2563EB),
+                              color: AppColors.accent,
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
                             ),
@@ -110,12 +116,27 @@ class EditProfileView extends GetView<EditProfileController> {
                     Positioned(
                       right: 12,
                       bottom: 12,
-                      child: FloatingActionButton.small(
-                        onPressed: () => controller.getCurrentLocation(),
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF2563EB),
-                        elevation: 0,
-                        child: const Icon(Icons.my_location_rounded),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          FloatingActionButton.small(
+                            onPressed: () => controller.toggleSatellite(),
+                            backgroundColor: context.bgCard,
+                            foregroundColor: AppColors.accent,
+                            elevation: 2,
+                            heroTag: 'sat_edit',
+                            child: const Icon(Icons.layers_rounded),
+                          ),
+                          const SizedBox(height: 8),
+                          FloatingActionButton.small(
+                            onPressed: () => controller.getCurrentLocation(),
+                            backgroundColor: context.bgCard,
+                            foregroundColor: AppColors.accent,
+                            elevation: 2,
+                            heroTag: 'loc_edit',
+                            child: const Icon(Icons.my_location_rounded),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -129,7 +150,7 @@ class EditProfileView extends GetView<EditProfileController> {
               child: Obx(() => ElevatedButton(
                 onPressed: controller.isLoading.value ? null : () => controller.onUpdateProfile(),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2563EB),
+                  backgroundColor: AppColors.accent,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -152,7 +173,7 @@ class EditProfileView extends GetView<EditProfileController> {
     );
   }
 
-  Widget _buildLabel(String text) {
+  Widget _buildLabel(BuildContext context, String text) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
       child: Text(
@@ -160,13 +181,13 @@ class EditProfileView extends GetView<EditProfileController> {
         style: GoogleFonts.plusJakartaSans(
           fontSize: 13,
           fontWeight: FontWeight.w700,
-          color: const Color(0xFF475569),
+          color: context.textMuted,
         ),
       ),
     );
   }
 
-  Widget _buildTextField({
+  Widget _buildTextField(BuildContext context, {
     required String hint, 
     required IconData icon, 
     int maxLines = 1,
@@ -175,9 +196,9 @@ class EditProfileView extends GetView<EditProfileController> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: context.bgCard,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: context.borderColor),
       ),
       child: TextField(
         controller: controller,
@@ -187,11 +208,11 @@ class EditProfileView extends GetView<EditProfileController> {
         style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: GoogleFonts.plusJakartaSans(fontSize: 13, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w500),
+          hintStyle: GoogleFonts.plusJakartaSans(fontSize: 13, color: context.textMuted.withValues(alpha: 0.6), fontWeight: FontWeight.w500),
           border: InputBorder.none,
           prefixIcon: Padding(
             padding: EdgeInsets.only(bottom: maxLines > 1 ? 45 : 0),
-            child: Icon(icon, size: 20, color: const Color(0xFF64748B)),
+            child: Icon(icon, size: 20, color: context.textMuted.withValues(alpha: 0.8)),
           ),
           contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: maxLines > 1 ? 16 : 14),
         ),

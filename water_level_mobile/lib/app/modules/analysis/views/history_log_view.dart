@@ -29,11 +29,32 @@ class HistoryLogView extends GetView<AnalysisController> {
           onPressed: () => Get.back(),
         ),
         actions: [
-          IconButton(
-            icon: Icon(Icons.file_download_outlined, color: AppColors.accent),
-            onPressed: () => controller.exportHistory(),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: ElevatedButton.icon(
+              onPressed: () => controller.exportHistory(),
+              icon: const Icon(Icons.file_download_outlined, size: 16, color: Colors.white),
+              label: Text(
+                'REPORT',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 16),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(70),

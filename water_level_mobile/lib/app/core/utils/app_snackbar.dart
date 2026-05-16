@@ -7,7 +7,20 @@ class AppSnackbar {
     required String title,
     required String message,
     bool isError = false,
+    bool isWarning = false,
   }) {
+    Color getIconColor() {
+      if (isError) return const Color(0xFFF87171); // Red
+      if (isWarning) return const Color(0xFFFBBF24); // Amber
+      return const Color(0xFF34D399); // Emerald
+    }
+
+    IconData getIconData() {
+      if (isError) return Icons.error_rounded;
+      if (isWarning) return Icons.warning_rounded;
+      return Icons.check_circle_rounded;
+    }
+
     Get.snackbar(
       '',
       '',
@@ -27,26 +40,25 @@ class AppSnackbar {
         ),
       ),
       snackPosition: SnackPosition.TOP,
-      backgroundColor: const Color(0xFF1E293B).withOpacity(0.9), // Slate 800
+      backgroundColor: const Color(0xFF1E293B).withOpacity(0.98),
       borderRadius: 12,
-      margin: const EdgeInsets.all(15),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       boxShadows: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.2),
-          blurRadius: 10,
-          offset: const Offset(0, 4),
+          color: Colors.black.withOpacity(0.1),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
         ),
       ],
       icon: Icon(
-        isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
-        color: isError ? const Color(0xFFFB7185) : const Color(0xFF34D399), // Rose 400 or Emerald 400
-        size: 28,
+        getIconData(),
+        color: getIconColor(),
+        size: 24,
       ),
-      borderWidth: 1,
-      borderColor: Colors.white.withOpacity(0.1),
-      duration: const Duration(seconds: 3),
-      overlayBlur: 0.5,
+      duration: const Duration(seconds: 4),
+      isDismissible: true,
+      dismissDirection: DismissDirection.horizontal,
     );
   }
 }

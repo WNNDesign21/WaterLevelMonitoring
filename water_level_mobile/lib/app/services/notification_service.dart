@@ -70,32 +70,32 @@ class NotificationService {
   }
 
   // ── Alert level helpers ──────────────────────────────────────────
-
-  static Future<void> notifySiaga1() => showAlert(
+  
+  static Future<void> notifySiaga1({String? customTitle, String? customBody}) => showAlert(
     id: 1,
-    title: '🚨 SIAGA 1 — BAHAYA!',
-    body: 'Air sungai telah melewati batas bantaran! Segera evakuasi ke tempat yang lebih tinggi.',
+    title: customTitle ?? '🚨 SIAGA 1 — BAHAYA!',
+    body: customBody ?? 'Air sungai telah melewati batas bantaran! Segera evakuasi ke tempat yang lebih tinggi.',
     importance: NotificationImportance.critical,
   );
 
-  static Future<void> notifySiaga2() => showAlert(
+  static Future<void> notifySiaga2({String? customTitle, String? customBody}) => showAlert(
     id: 2,
-    title: '⚠️ SIAGA 2 — WASPADA',
-    body: 'Tinggi air mendekati batas bantaran. Pantau situasi dan bersiap untuk evakuasi.',
+    title: customTitle ?? '⚠️ SIAGA 2 — WASPADA',
+    body: customBody ?? 'Tinggi air mendekati batas bantaran. Pantau situasi dan bersiap untuk evakuasi.',
     importance: NotificationImportance.warning,
   );
 
-  static Future<void> notifySiaga3() => showAlert(
+  static Future<void> notifySiaga3({String? customTitle, String? customBody}) => showAlert(
     id: 3,
-    title: '📡 SIAGA 3 — PANTAU',
-    body: 'Tinggi air mengalami kenaikan signifikan. Status dimonitor secara aktif.',
+    title: customTitle ?? '📡 SIAGA 3 — PANTAU',
+    body: customBody ?? 'Tinggi air mengalami kenaikan signifikan. Status dimonitor secara aktif.',
     importance: NotificationImportance.info,
   );
 
-  static Future<void> notifyAman() => showAlert(
+  static Future<void> notifyAman({String? customTitle, String? customBody}) => showAlert(
     id: 4,
-    title: '✅ Status: AMAN',
-    body: 'Tinggi air kembali normal. Situasi terkendali.',
+    title: customTitle ?? '✅ Status: AMAN',
+    body: customBody ?? 'Tinggi air kembali normal. Situasi terkendali.',
     importance: NotificationImportance.info,
   );
 }

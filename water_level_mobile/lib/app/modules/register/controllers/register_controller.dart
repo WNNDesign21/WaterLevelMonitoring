@@ -5,16 +5,21 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:water_level_mobile/app/core/utils/app_snackbar.dart';
-import 'package:water_level_mobile/app/data/providers/api_provider.dart';
+import 'package:water_level_mobile/app/data/repositories/auth_repository.dart';
 import 'package:water_level_mobile/app/routes/app_pages.dart';
 
 class RegisterController extends GetxController {
-  final ApiProvider apiProvider = ApiProvider();
+  final AuthRepository _authRepo = Get.find<AuthRepository>();
   final GetStorage storage = GetStorage();
   
   final currentStep = 1.obs;
   final pageController = PageController();
   final isLoading = false.obs;
+  final isSatelliteMode = false.obs;
+
+  void toggleSatellite() {
+    isSatelliteMode.value = !isSatelliteMode.value;
+  }
 
   // Form Fields - Step 1
   final fullNameController = TextEditingController();
@@ -132,19 +137,15 @@ class RegisterController extends GetxController {
         'emergency_phone': emergencyContactController.text.trim(),
       };
 
-      final response = await apiProvider.register(userData);
+      final response = await _authRepo.register(userData);
       
-      if (response['statusCode'] == 201) {
-        final data = response['data'];
-        storage.write('token', data['token']);
-        storage.write('user', data['user']);
-        
+      if (response != null && (response['statusCode'] == 200 || response['statusCode'] == 201)) {
         Get.offAllNamed(Routes.HOME);
         AppSnackbar.show(
           title: 'Berhasil',
           message: 'Akun Anda berhasil dibuat. Selamat datang!',
         );
-      } else {
+      } else if (response != null) {
         String msg = response['data']['message'] ?? 'Gagal mendaftar';
         if (response['data']['errors'] != null) {
           msg = (response['data']['errors'] as Map).values.first[0];

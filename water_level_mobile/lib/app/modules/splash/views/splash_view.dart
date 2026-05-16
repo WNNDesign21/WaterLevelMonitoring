@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:math' as math;
+import '../../../core/theme/app_theme.dart';
 import '../controllers/splash_controller.dart';
 
 class SplashView extends GetView<SplashController> {
@@ -9,46 +10,40 @@ class SplashView extends GetView<SplashController> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF0F172A) : Colors.white;
-    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
-    final logoAsset = isDark ? 'assets/images/logo_dark.png' : 'assets/images/logo.png';
-    final waveColor = const Color(0xFF4F7EF8).withOpacity(isDark ? 0.4 : 0.3);
-
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: context.bgPrimary,
       body: Stack(
         children: [
-          // Bottom Wave Animation
+          // 1. Dynamic Water Waves (3 Layers for Depth)
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
-            height: 200,
+            height: 250,
             child: TweenAnimationBuilder<double>(
-              duration: const Duration(seconds: 5),
+              duration: const Duration(seconds: 15),
               tween: Tween(begin: 0.0, end: 1.0),
               builder: (context, value, child) {
                 return CustomPaint(
                   painter: _WavePainter(
                     progress: value,
-                    color: waveColor,
+                    color: AppColors.accent,
                   ),
                 );
               },
-              onEnd: () {}, // Handled by controller timer
             ),
           ),
           
+          // 2. Centered Branding
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo with Clean Fade
+                // Simple Logo Entrance
                 TweenAnimationBuilder<double>(
-                  duration: const Duration(milliseconds: 1200),
+                  duration: const Duration(milliseconds: 1500),
                   tween: Tween(begin: 0.0, end: 1.0),
-                  curve: Curves.easeOutCubic,
+                  curve: Curves.easeOut,
                   builder: (context, value, child) {
                     return Opacity(
                       opacity: value,
@@ -59,73 +54,52 @@ class SplashView extends GetView<SplashController> {
                     );
                   },
                   child: Image.asset(
-                    logoAsset,
+                    context.isDark ? 'assets/images/logo_dark.png' : 'assets/images/logo.png',
                     width: 140,
                     height: 140,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) =>
-                        Icon(Icons.water_drop_rounded, size: 100, color: const Color(0xFF4F7EF8)),
+                        Icon(Icons.water_drop_rounded, size: 100, color: AppColors.accent),
                   ),
                 ),
                 
                 const SizedBox(height: 32),
                 
-                // App Name with Dual Colors
-                TweenAnimationBuilder<double>(
-                  duration: const Duration(milliseconds: 1000),
-                  tween: Tween(begin: 0.0, end: 1.0),
-                  builder: (context, value, child) {
-                    return Opacity(
-                      opacity: value,
-                      child: child,
-                    );
-                  },
-                  child: RichText(
-                    text: TextSpan(
-                      children: [
-                        TextSpan(
-                          text: 'Water',
-                          style: GoogleFonts.inter(
-                            fontSize: 36,
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFF4F7EF8), // Dashboard Accent Blue (Royal Blue)
-                            letterSpacing: -0.5,
-                          ),
+                // Minimalist Typography
+                RichText(
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'Water',
+                        style: GoogleFonts.inter(
+                          fontSize: 40,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.accent,
+                          letterSpacing: -1.0,
                         ),
-                        TextSpan(
-                          text: 'Sense',
-                          style: GoogleFonts.inter(
-                            fontSize: 36,
-                            fontWeight: FontWeight.w900,
-                            color: textColor,
-                            letterSpacing: -0.5,
-                          ),
+                      ),
+                      TextSpan(
+                        text: 'Sense',
+                        style: GoogleFonts.inter(
+                          fontSize: 40,
+                          fontWeight: FontWeight.w900,
+                          color: context.textPrimary,
+                          letterSpacing: -1.0,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
                 
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 
-                // Subtitle
-                TweenAnimationBuilder<double>(
-                  duration: const Duration(milliseconds: 1000),
-                  tween: Tween(begin: 0.0, end: 1.0),
-                  builder: (context, value, child) {
-                    return Opacity(
-                      opacity: value,
-                      child: child,
-                    );
-                  },
-                  child: Text(
-                    'SMART HYDROLOGY SYSTEM',
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: textColor.withOpacity(0.4),
-                      letterSpacing: 4.0,
-                    ),
+                Text(
+                  'SMART FLOOD MONITORING SYSTEM',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: context.textMuted.withValues(alpha: 0.4),
+                    letterSpacing: 4.0,
                   ),
                 ),
               ],
@@ -145,43 +119,36 @@ class _WavePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final h = size.height;
+
+    // Draw 3 layers of waves
+    _drawWave(canvas, size, 
+        h * 0.5, 25, progress * 2 * math.pi * 2, color.withValues(alpha: 0.1));
+    _drawWave(canvas, size, 
+        h * 0.6, 18, -progress * 2 * math.pi * 3 + math.pi/4, color.withValues(alpha: 0.2));
+    _drawWave(canvas, size, 
+        h * 0.7, 12, progress * 2 * math.pi * 1.5 + math.pi/2, color.withValues(alpha: 0.3));
+  }
+
+  void _drawWave(Canvas canvas, Size size, double baseHeight, double amplitude, double phase, Color waveColor) {
     final paint = Paint()
-      ..color = color
+      ..color = waveColor
       ..style = PaintingStyle.fill;
 
     final path = Path();
-    final h = size.height;
     final w = size.width;
+    final h = size.height;
 
-    path.moveTo(0, h * 0.5);
-    
+    path.moveTo(0, baseHeight);
     for (double x = 0; x <= w; x++) {
-      final y = h * 0.5 + 
-                15 * math.sin((x / w * 2 * math.pi) + (progress * 2 * math.pi * 2));
+      final y = baseHeight + 
+                amplitude * math.sin((x / w * 2 * math.pi) + phase);
       path.lineTo(x, y);
     }
-
     path.lineTo(w, h);
     path.lineTo(0, h);
     path.close();
-
     canvas.drawPath(path, paint);
-    
-    // Draw secondary wave for more depth
-    final path2 = Path();
-    final paint2 = Paint()..color = color.withOpacity(color.opacity * 0.5);
-    
-    path2.moveTo(0, h * 0.6);
-    for (double x = 0; x <= w; x++) {
-      final y = h * 0.6 + 
-                12 * math.sin((x / w * 2 * math.pi) - (progress * 2 * math.pi * 1.5) + math.pi);
-      path2.lineTo(x, y);
-    }
-    path2.lineTo(w, h);
-    path2.lineTo(0, h);
-    path2.close();
-    
-    canvas.drawPath(path2, paint2);
   }
 
   @override

@@ -20,6 +20,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/complete-profile', [AuthController::class, 'completeProfile']);
+    Route::post('/update-profile', [AuthController::class, 'updateProfile']);
 });
 
 Route::get('/devices', [SensorDataController::class, 'list']);

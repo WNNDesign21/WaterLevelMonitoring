@@ -3,25 +3,17 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:water_level_mobile/app/core/utils/app_snackbar.dart';
-import 'package:water_level_mobile/app/data/providers/api_provider.dart';
+import 'package:water_level_mobile/app/data/repositories/auth_repository.dart';
 import 'package:water_level_mobile/app/routes/app_pages.dart';
+import '../../home/controllers/home_controller.dart';
 
 class LoginController extends GetxController {
-  final ApiProvider apiProvider = ApiProvider();
+  final AuthRepository _authRepo = Get.find<AuthRepository>();
   final GetStorage storage = GetStorage();
-
-  // Instance of GoogleSignIn
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId: GetPlatform.isAndroid
-        ? '449684741383-6ftjo6ng8dlocpvce35qi0stef40vb5l.apps.googleusercontent.com'
-        : GetPlatform.isIOS
-            ? '449684741383-cugt5eh4olcek4setmce1p085cvj4bu5.apps.googleusercontent.com'
-            : '449684741383-99miv52mmk68lq9cfcgo8mgt4oljemd1.apps.googleusercontent.com', // Web Client ID
-  );
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-
   final isLoading = false.obs;
   final isPasswordVisible = false.obs;
   final rememberMe = false.obs;
@@ -29,12 +21,9 @@ class LoginController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Load saved email if exists
-    final savedEmail = storage.read('saved_email');
-    if (savedEmail != null) {
-      emailController.text = savedEmail;
-      rememberMe.value = true;
-    }
+    emailController.text = storage.read('remember_email') ?? '';
+    passwordController.text = storage.read('remember_password') ?? '';
+    rememberMe.value = storage.read('remember_me') ?? false;
   }
 
   void togglePasswordVisibility() {
@@ -46,48 +35,55 @@ class LoginController extends GetxController {
   }
 
   Future<void> onLogin() async {
-    final email = emailController.text.trim();
-    final password = passwordController.text.trim();
-
-    if (email.isEmpty || password.isEmpty) {
-      Get.snackbar('Error', 'Email dan password harus diisi',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white);
+    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
+      AppSnackbar.show(
+        title: 'Form Belum Lengkap',
+        message: 'Harap isi email dan password Anda.',
+        isError: true,
+      );
       return;
     }
 
     isLoading.value = true;
     try {
-      final response = await apiProvider.login(email, password);
+      final user = await _authRepo.login(
+        emailController.text.trim(),
+        passwordController.text,
+      );
 
-      if (response['statusCode'] == 200) {
-        final data = response['data'];
-        final token = data['token'];
-        final user = data['user'];
-
-        // Save session
-        storage.write('token', token);
-        storage.write('user', user);
-
+      if (user != null) {
         if (rememberMe.value) {
-          storage.write('saved_email', email);
+          storage.write('remember_me', true);
+          storage.write('remember_email', emailController.text.trim());
+          storage.write('remember_password', passwordController.text);
         } else {
-          storage.remove('saved_email');
+          storage.remove('remember_me');
+          storage.remove('remember_email');
+          storage.remove('remember_password');
         }
 
+        try {
+          final homeController = Get.find<HomeController>();
+          homeController.stopMonitoring();
+          homeController.startMonitoring();
+        } catch (_) {}
+
         Get.offAllNamed(Routes.HOME);
+        AppSnackbar.show(
+          title: 'Berhasil',
+          message: 'Selamat datang kembali, ${user.name}!',
+        );
       } else {
         AppSnackbar.show(
           title: 'Login Gagal',
-          message: response['data']['message'] ?? 'Terjadi kesalahan pada server.',
+          message: 'Email atau password salah.',
           isError: true,
         );
       }
     } catch (e) {
       AppSnackbar.show(
-        title: 'Koneksi Bermasalah',
-        message: 'Tidak dapat terhubung ke server. Silakan cek koneksi internet Anda.',
+        title: 'Kesalahan Sistem',
+        message: 'Terjadi masalah saat menghubungi server.',
         isError: true,
       );
     } finally {
@@ -96,68 +92,58 @@ class LoginController extends GetxController {
   }
 
   Future<void> onGoogleLogin() async {
-    isLoading.value = true;
     try {
-      // Paksa logout dari sesi Google sebelumnya agar muncul pilihan akun di Web
-      try {
-        await _googleSignIn.signOut();
-        await _googleSignIn.disconnect();
-      } catch (_) {}
+      // Paksa keluar dulu agar muncul pilihan akun (Account Picker)
+      await _googleSignIn.signOut();
+      
+      final GoogleSignInAccount? googleAccount = await _googleSignIn.signIn();
+      if (googleAccount == null) return;
 
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        isLoading.value = false;
-        return;
-      }
+      isLoading.value = true;
+      
+      final GoogleSignInAuthentication googleAuth = await googleAccount.authentication;
 
-      final googleData = {
-        'email': googleUser.email,
-        'name': googleUser.displayName ?? 'User',
-        'google_id': googleUser.id,
-        'avatar': googleUser.photoUrl,
-      };
+      final response = await _authRepo.googleLogin({
+        'name': googleAccount.displayName,
+        'email': googleAccount.email,
+        'google_id': googleAccount.id,
+        'avatar': googleAccount.photoUrl,
+        'id_token': googleAuth.idToken,
+      });
 
-      // Bersihkan session lama sebelum mulai login baru
-      await storage.erase();
-
-      final response = await apiProvider.googleLogin(googleData);
-
-      if (response['statusCode'] == 200) {
-        final body = response['data'];
+      if (response != null) {
+        final bool isComplete = response['is_complete'] ?? true;
         
-        if (body != null) {
-          final token = body['token'];
-          final user = body['user'];
-          final bool needsProfileComplete = body['is_complete'] == false;
+        try {
+          final homeController = Get.find<HomeController>();
+          homeController.stopMonitoring();
+          homeController.startMonitoring();
+        } catch (_) {}
 
-          await storage.write('token', token);
-          await storage.write('user', user);
-          await storage.write('is_logged_in', true);
-          await storage.write('is_guest', false);
-
-          if (needsProfileComplete) {
-            Get.offAllNamed(Routes.COMPLETE_PROFILE);
-          } else {
-            Get.offAllNamed(Routes.HOME);
-          }
-        } else {
+        if (isComplete) {
+          Get.offAllNamed(Routes.HOME);
           AppSnackbar.show(
-            title: 'Oops!',
-            message: 'Data login tidak ditemukan. Silakan coba lagi.',
-            isError: true,
+            title: 'Berhasil',
+            message: 'Login Google berhasil. Selamat datang!',
+          );
+        } else {
+          Get.offAllNamed(Routes.COMPLETE_PROFILE);
+          AppSnackbar.show(
+            title: 'Hampir Selesai',
+            message: 'Silakan lengkapi profil Anda terlebih dahulu.',
           );
         }
       } else {
         AppSnackbar.show(
-          title: 'Google Login Gagal',
-          message: response['data']['message'] ?? 'Gagal masuk melalui Google.',
+          title: 'Gagal',
+          message: 'Gagal masuk menggunakan Google.',
           isError: true,
         );
       }
     } catch (e) {
       AppSnackbar.show(
         title: 'Kesalahan Sistem',
-        message: 'Gagal menghubungkan akun Google Anda. Silakan coba sesaat lagi.',
+        message: 'Gagal menghubungkan akun Google: $e',
         isError: true,
       );
     } finally {
@@ -168,6 +154,14 @@ class LoginController extends GetxController {
   void onGuestAccess() {
     storage.remove('token');
     storage.remove('user');
+    storage.write('is_guest', true);
+    
+    try {
+      final homeController = Get.find<HomeController>();
+      homeController.stopMonitoring();
+      homeController.startMonitoring();
+    } catch (_) {}
+
     Get.offAllNamed(Routes.HOME);
   }
 

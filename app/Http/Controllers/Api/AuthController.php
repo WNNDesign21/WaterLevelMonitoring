@@ -209,6 +209,41 @@ class AuthController extends Controller
         ]);
     }
 
+    public function updateProfile(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string',
+            'address' => 'required|string',
+            'latitude' => 'required|numeric',
+            'longitude' => 'required|numeric',
+            'emergency_phone' => 'required|string',
+        ]);
+
+        $user = $request->user();
+        $user->update([
+            'name' => $request->name,
+            'phone' => $request->phone,
+            'address' => $request->address,
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
+            'emergency_phone' => $request->emergency_phone,
+        ]);
+
+        ActivityLog::create([
+            'user_id' => $user->id,
+            'event_type' => 'update_profile_api',
+            'description' => 'User updated their profile',
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
+        return response()->json([
+            'message' => 'Profil berhasil diperbarui',
+            'user' => $user
+        ]);
+    }
+
     public function forgotPassword(Request $request, WhatsAppService $waService)
     {
         $request->validate([
@@ -232,6 +267,16 @@ class AuthController extends Controller
                 return response()->json(['message' => 'Nomor WhatsApp tidak terdaftar.'], 422);
             }
 
+            // Normalisasi nomor telepon (Ubah 08/628/+62 menjadi 628)
+            $phone = preg_replace('/[^0-9]/', '', $user->phone);
+            if (substr($phone, 0, 1) === '0') {
+                $phone = '62' . substr($phone, 1);
+            } elseif (substr($phone, 0, 2) === '62') {
+                // Sudah benar
+            } else {
+                $phone = '62' . $phone; // Tambahkan 62 jika belum ada
+            }
+
             // Deep Link for Mobile App
             $resetUrl = "watersense://reset-password?token=" . $token . "&email=" . $request->email;
             
@@ -239,15 +284,16 @@ class AuthController extends Controller
             $message .= "Halo *" . $user->name . "*,\n\n";
             $message .= "Kami menerima permintaan reset password. Silakan klik link di bawah ini untuk membuka aplikasi:\n\n";
             $message .= $resetUrl . "\n\n";
-            $message .= "⚠️ *Link ini akan otomatis membuka aplikasi WaterSense.*";
+            $message .= "⚠️ *Jika link tidak bisa diklik, salin pesan ini ke chat lain atau browser Anda.*";
 
-            $sent = $waService->sendMessage($user->phone, $message);
+            $sent = $waService->sendMessage($phone, $message);
             if (!$sent) {
-                return response()->json(['message' => 'Gagal mengirim WhatsApp.'], 500);
+                return response()->json(['message' => 'Gagal mengirim WhatsApp. Pastikan nomor aktif.'], 500);
             }
 
             return response()->json(['message' => 'Link reset telah dikirim ke WhatsApp.']);
-        } else {
+        }
+ else {
             Mail::to($request->email)->send(new PasswordResetMail($token, $request->email));
             return response()->json(['message' => 'Link reset telah dikirim ke email.']);
         }

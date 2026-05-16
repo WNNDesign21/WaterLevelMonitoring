@@ -7,13 +7,11 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'app/core/theme/app_theme.dart';
 import 'app/core/theme/theme_controller.dart';
 import 'app/routes/app_pages.dart';
-import 'app/modules/home/controllers/home_controller.dart';
-import 'app/data/providers/api_provider.dart';
-import 'app/data/providers/weather_provider.dart';
 import 'app/services/notification_service.dart';
 import 'app/data/services/deep_link_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'app/core/bindings/initial_binding.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,29 +20,24 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  
+
   // Initialize Deep Link Service early
   await Get.putAsync(() => DeepLinkService().init());
-  
+
   // Load Environment Variables
   await dotenv.load(fileName: ".env");
-  
+
   // Initialize Storage
   await GetStorage.init();
-  
+
   // Initialize Notification Service
   await NotificationService.init();
-  
+
   // Initialize Date Formatting for id_ID
   await initializeDateFormatting('id_ID', null);
 
-  // Inject Providers
-  Get.put(ApiProvider(), permanent: true);
-  Get.put(WeatherProvider(), permanent: true);
-
   // Inject Controllers
   Get.put(ThemeController(), permanent: true);
-  Get.put(HomeController(), permanent: true);
 
   runApp(const MyApp());
 }
@@ -69,6 +62,7 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       title: 'WaterSense',
       initialRoute: AppPages.INITIAL,
+      initialBinding: InitialBinding(),
       getPages: AppPages.routes,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,

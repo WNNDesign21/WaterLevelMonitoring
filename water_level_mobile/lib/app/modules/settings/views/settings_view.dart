@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:water_level_mobile/app/data/models/device_model.dart';
 import 'package:water_level_mobile/app/routes/app_pages.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../widgets/device_picker_item.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../controllers/settings_controller.dart';
 
@@ -98,7 +100,7 @@ class SettingsView extends GetView<SettingsController> {
                       icon: Icons.sensors_rounded,
                       iconColor: AppColors.accent,
                       title: 'Node Pemantauan Utama',
-                      subtitle: controller.homeController.selectedDeviceName.value,
+                      subtitle: controller.defaultDeviceName.value,
                       onTap: () => _showNodeSelector(context),
                       showChevron: true,
                     )),
@@ -179,69 +181,110 @@ class SettingsView extends GetView<SettingsController> {
   }
 
   Widget _buildProfileCard(BuildContext context) {
-    return Obx(() => GestureDetector(
-      onTap: controller.isGuest.value 
-          ? null 
-          : () => Get.toNamed(Routes.EDIT_PROFILE),
-      child: Container(
-        padding: const EdgeInsets.all(20),
+    return Obx(() {
+      final isGuest = controller.isGuest.value;
+      final photoUrl = controller.userPhotoUrl.value;
+
+      return Container(
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: context.bgCard,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: context.borderColor),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: context.isDark ? 0.2 : 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           children: [
             Row(
               children: [
+                // ── Avatar dengan Ring Premium ────────────────────────
                 Container(
-                  width: 60,
-                  height: 60,
+                  padding: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppColors.accent, AppColors.accent.withValues(alpha: 0.6)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.accent.withValues(alpha: 0.2),
+                      width: 1.5,
                     ),
-                    borderRadius: BorderRadius.circular(18),
                   ),
-                  child: const Icon(Icons.person_rounded, color: Colors.white, size: 30),
+                  child: Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: context.bgPrimary,
+                      shape: BoxShape.circle,
+                      image: photoUrl.isNotEmpty
+                          ? DecorationImage(image: NetworkImage(photoUrl), fit: BoxFit.cover)
+                          : null,
+                    ),
+                    child: photoUrl.isEmpty ? _buildAvatarFallback(context, isGuest) : null,
+                  ),
                 ),
                 const SizedBox(width: 16),
+                
+                // ── User Info ──────────────────────────────────────
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Obx(() => Text(
-                        controller.userName.value,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: context.textPrimary,
-                        ),
-                      )),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              controller.userName.value,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                color: context.textPrimary,
+                                letterSpacing: -0.4,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (!isGuest) ...[
+                            const SizedBox(width: 6),
+                            const Icon(Icons.verified_rounded, size: 16, color: Color(0xFF10B981)),
+                          ],
+                        ],
+                      ),
                       const SizedBox(height: 2),
-                      Obx(() => Text(
-                        controller.userEmail.value,
+                      Text(
+                        isGuest ? 'Akses Terbatas (Guest Mode)' : controller.userEmail.value,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
+                          fontWeight: FontWeight.w500,
                           color: context.textMuted,
-                          fontWeight: FontWeight.w600,
                         ),
-                      )),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ),
                 ),
-                if (!controller.isGuest.value)
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(color: context.bgPrimary, shape: BoxShape.circle),
-                    child: Icon(Icons.edit_note_rounded, color: context.textMuted, size: 20),
+
+                // ── Action (Chevron atau Edit) ─────────────────────
+                if (!isGuest)
+                  IconButton(
+                    onPressed: () => Get.toNamed(Routes.EDIT_PROFILE),
+                    icon: Icon(Icons.arrow_forward_ios_rounded, 
+                      color: context.textMuted.withValues(alpha: 0.5), 
+                      size: 16,
+                    ),
                   ),
               ],
             ),
-            if (controller.isGuest.value) ...[
-              const SizedBox(height: 20),
+
+            if (isGuest) ...[
+              const SizedBox(height: 16),
+              Divider(height: 1, color: context.borderColor.withValues(alpha: 0.5)),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
@@ -255,11 +298,8 @@ class SettingsView extends GetView<SettingsController> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       child: Text(
-                        'Masuk',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                        ),
+                        'Masuk Akun',
+                        style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w700),
                       ),
                     ),
                   ),
@@ -268,27 +308,69 @@ class SettingsView extends GetView<SettingsController> {
                     child: OutlinedButton(
                       onPressed: () => controller.goToRegister(),
                       style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: AppColors.accent, width: 1.5),
-                        foregroundColor: AppColors.accent,
+                        side: BorderSide(color: context.borderColor),
+                        foregroundColor: context.textPrimary,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       child: Text(
-                        'Daftar',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                        ),
+                        'Daftar Baru',
+                        style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w700),
                       ),
                     ),
                   ),
                 ],
               ),
+            ] else ...[
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: () => Get.toNamed(Routes.EDIT_PROFILE),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.accent.withValues(alpha: 0.1)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.manage_accounts_rounded, size: 14, color: AppColors.accent),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Kelola Profil & Akun',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.accent,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ],
         ),
+      );
+    });
+  }
+
+  Widget _buildAvatarFallback(BuildContext context, bool isGuest) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.accent.withValues(alpha: 0.1),
+        shape: BoxShape.circle,
       ),
-    ));
+      child: Center(
+        child: Icon(
+          isGuest ? Icons.person_outline_rounded : Icons.person_rounded,
+          color: AppColors.accent.withValues(alpha: 0.6),
+          size: 32,
+        ),
+      ),
+    );
   }
 
   Widget _buildSettingsGroup(BuildContext context, List<Widget> children) {
@@ -574,16 +656,19 @@ class SettingsView extends GetView<SettingsController> {
 
   void _showNodeSelector(BuildContext context) {
     final homeController = controller.homeController;
+    final searchController = TextEditingController();
+    final filteredDevices = <DeviceModel>[].obs;
+    filteredDevices.value = homeController.devices;
     
     Get.bottomSheet(
       Container(
-        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+        height: MediaQuery.of(context).size.height * 0.7,
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
         decoration: BoxDecoration(
           color: context.bgPrimary,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
             Container(width: 40, height: 4, decoration: BoxDecoration(color: context.dividerColor, borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 24),
@@ -592,66 +677,59 @@ class SettingsView extends GetView<SettingsController> {
               style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w800, color: context.textPrimary),
             ),
             const SizedBox(height: 24),
-            Flexible(
-              child: ListView.separated(
-                shrinkWrap: true,
-                itemCount: homeController.devices.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final device = homeController.devices[index];
-                  
-                  return Obx(() {
-                    final isSelected = homeController.selectedDeviceSlug.value == device['slug'];
-                    
-                    return InkWell(
-                      onTap: () {
-                        // Update selection
-                        controller.setDefaultDevice(device);
-                        homeController.onDeviceSelected(device);
-                        
-                        // Close after a short delay for feedback
-                        Future.delayed(const Duration(milliseconds: 300), () {
-                          if (Get.isBottomSheetOpen == true) Get.back();
-                        });
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: isSelected ? AppColors.accent.withValues(alpha: 0.08) : context.bgCard,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isSelected ? AppColors.accent : context.borderColor,
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.sensors_rounded, 
-                              color: isSelected ? AppColors.accent : context.textMuted,
-                              size: 22,
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Text(
-                                device['name'] ?? '',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 14, 
-                                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700, 
-                                  color: isSelected ? AppColors.accent : context.textPrimary
-                                ),
-                              ),
-                            ),
-                            if (isSelected) 
-                              const Icon(Icons.check_circle_rounded, color: AppColors.accent, size: 22),
-                          ],
-                        ),
-                      ),
-                    );
-                  });
-                },
+            DevicePickerSmartOptions(
+              controller: homeController,
+              context: context,
+              isDefaultMode: true,
+            ),
+            const SizedBox(height: 24),
+            DevicePickerSearch(
+              controller: searchController,
+              onChanged: (val) {
+                filteredDevices.value = homeController.devices
+                    .where((d) =>
+                        d.name.toLowerCase().contains(val.toLowerCase()) ||
+                        (d.location ?? '')
+                            .toLowerCase()
+                            .contains(val.toLowerCase()))
+                    .toList();
+              },
+            ),
+            const SizedBox(height: 24),
+            Expanded(
+              child: Stack(
+                children: [
+                  Obx(() => ListView.separated(
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: filteredDevices.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final device = filteredDevices[index];
+                          
+                          return Obx(() {
+                            final isSelected = homeController.defaultDeviceSlug.value == device.slug;
+                            
+                            return DevicePickerItem(
+                              device: device,
+                              isSelected: isSelected,
+                              onTap: () {
+                                // Update selection (as default)
+                                controller.setDefaultDevice(device);
+                                homeController.onDeviceSelected(device);
+                                
+                                // Close after a short delay for feedback
+                                Future.delayed(const Duration(milliseconds: 300), () {
+                                  if (Get.isBottomSheetOpen == true) Get.back();
+                                });
+                              },
+                            );
+                          });
+                        },
+                      )),
+                  Obx(() => DeviceScanningOverlay(
+                    isVisible: homeController.isSearchingNode.value,
+                  )),
+                ],
               ),
             ),
           ],

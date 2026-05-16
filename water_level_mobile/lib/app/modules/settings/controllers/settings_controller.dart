@@ -2,13 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:water_level_mobile/app/core/utils/app_snackbar.dart';
 import 'package:water_level_mobile/app/routes/app_pages.dart';
+import 'package:water_level_mobile/app/data/repositories/auth_repository.dart';
 import '../../home/controllers/home_controller.dart';
+
+import '../../../data/models/user_model.dart';
+import '../../../data/models/device_model.dart';
 
 class SettingsController extends GetxController {
   final _storage = GetStorage();
+  final _secureStorage = const FlutterSecureStorage();
+  final _authRepo = Get.find<AuthRepository>();
   final homeController = Get.find<HomeController>();
 
   // Version Info
@@ -23,11 +30,14 @@ class SettingsController extends GetxController {
   
   final userName = 'User Guest'.obs;
   final userEmail = 'Administrator Akses Terbatas'.obs;
+  final userPhotoUrl = ''.obs;
+  var defaultDeviceName = 'Node Terdekat (Auto)'.obs;
 
   @override
   void onInit() {
     super.onInit();
     _loadUser();
+    _updateDefaultDeviceName();
     
     // Dengarkan perubahan storage agar profil langsung terupdate
     _storage.listenKey('user', (value) {
@@ -35,18 +45,21 @@ class SettingsController extends GetxController {
     });
   }
 
-  void _loadUser() {
-    final user = _storage.read('user');
-    final token = _storage.read('token');
+  Future<void> _loadUser() async {
+    final userData = _storage.read('user');
+    final token = await _secureStorage.read(key: 'token');
     
-    if (user != null && token != null) {
+    if (userData != null && token != null) {
+      final user = UserModel.fromJson(userData);
       isGuest.value = false;
-      userName.value = user['name'] ?? 'User';
-      userEmail.value = user['email'] ?? '';
+      userName.value = user.name;
+      userEmail.value = user.email;
+      userPhotoUrl.value = user.photoUrl ?? '';
     } else {
       isGuest.value = true;
       userName.value = 'User Guest';
       userEmail.value = 'Akses Tamu Terbatas';
+      userPhotoUrl.value = '';
     }
   }
 
@@ -81,9 +94,8 @@ class SettingsController extends GetxController {
   }
 
   void logout() async {
-    await _storage.erase();
-    // Beri jeda singkat untuk sinkronisasi storage di Web
-    await Future.delayed(const Duration(milliseconds: 100));
+    homeController.stopMonitoring();
+    await _authRepo.logout();
     Get.offAllNamed(Routes.LOGIN);
     AppSnackbar.show(
       title: 'Sesi Berakhir',
@@ -183,13 +195,29 @@ class SettingsController extends GetxController {
     );
   }
 
-  void setDefaultDevice(Map<String, dynamic> device) {
-    final slug = device['slug'] ?? '';
+  void setDefaultDevice(DeviceModel device) {
+    final slug = device.slug;
     _storage.write('default_device_slug', slug);
+    homeController.defaultDeviceSlug.value = slug;
+    _updateDefaultDeviceName();
     AppSnackbar.show(
       title: 'Perangkat Disetel',
-      message: '${device['name']} kini menjadi perangkat utama Anda.',
+      message: '${device.name} kini menjadi perangkat utama Anda.',
     );
+  }
+
+  void _updateDefaultDeviceName() {
+    final slug = _storage.read<String>('default_device_slug');
+    if (slug != null && homeController.devices.isNotEmpty) {
+      final device = homeController.devices.firstWhereOrNull(
+        (d) => d.slug == slug,
+      );
+      if (device != null) {
+        defaultDeviceName.value = device.name;
+        return;
+      }
+    }
+    defaultDeviceName.value = 'Node Terdekat (Auto)';
   }
 
   String getDefaultDeviceSlug() {

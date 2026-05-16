@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:water_level_mobile/app/data/providers/api_provider.dart';
+import 'package:water_level_mobile/app/data/repositories/auth_repository.dart';
 import 'package:water_level_mobile/app/routes/app_pages.dart';
+import 'package:water_level_mobile/app/core/utils/app_snackbar.dart';
 
 class ResetPasswordController extends GetxController {
-  final ApiProvider apiProvider = ApiProvider();
+  final AuthRepository _authRepo = Get.find<AuthRepository>();
   
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
@@ -32,18 +33,18 @@ class ResetPasswordController extends GetxController {
     final confirmPassword = confirmPasswordController.text;
 
     if (password.isEmpty || confirmPassword.isEmpty) {
-      Get.snackbar('Error', 'Semua field harus diisi', backgroundColor: Colors.red, colorText: Colors.white);
+      AppSnackbar.show(title: 'Error', message: 'Semua field harus diisi', isError: true);
       return;
     }
 
     if (password != confirmPassword) {
-      Get.snackbar('Error', 'Konfirmasi password tidak cocok', backgroundColor: Colors.red, colorText: Colors.white);
+      AppSnackbar.show(title: 'Error', message: 'Konfirmasi password tidak cocok', isError: true);
       return;
     }
 
     isLoading.value = true;
     try {
-      final response = await apiProvider.resetPassword({
+      final response = await _authRepo.resetPassword({
         'token': token,
         'email': email,
         'password': password,
@@ -51,13 +52,13 @@ class ResetPasswordController extends GetxController {
       });
 
       if (response['statusCode'] == 200) {
-        Get.snackbar('Sukses', 'Password berhasil diperbarui!', backgroundColor: Colors.green, colorText: Colors.white);
+        AppSnackbar.show(title: 'Sukses', message: 'Password berhasil diperbarui!');
         Get.offAllNamed(Routes.LOGIN);
       } else {
-        Get.snackbar('Gagal', response['data']['message'] ?? 'Gagal mereset password', backgroundColor: Colors.red, colorText: Colors.white);
+        AppSnackbar.show(title: 'Gagal', message: response['data']['message'] ?? 'Gagal mereset password', isError: true);
       }
     } catch (e) {
-      Get.snackbar('Error', 'Terjadi kesalahan koneksi', backgroundColor: Colors.red, colorText: Colors.white);
+      AppSnackbar.show(title: 'Error', message: 'Terjadi kesalahan koneksi', isError: true);
     } finally {
       isLoading.value = false;
     }

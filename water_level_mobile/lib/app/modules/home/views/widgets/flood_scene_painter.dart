@@ -67,7 +67,7 @@ class FloodScenePainter extends CustomPainter {
       final riverBedMdpl = bankLevelMdpl - (riverDepth / 100.0);
       final double techFill =
           ((waterLevel - riverBedMdpl) / (bankLevelMdpl - riverBedMdpl))
-               .clamp(0.0, 1.0);
+              .clamp(0.0, 1.0);
 
       _drawWater(canvas, Offset(0, topH), Size(w, bottomH), techFill);
       _drawTechnicalOverlay(canvas, Offset(0, topH), Size(w, bottomH), techFill,
@@ -82,14 +82,14 @@ class FloodScenePainter extends CustomPainter {
   void _drawAtmosphereBackground(Canvas canvas, Size size) {
     final skyColors = isDark
         ? [
-            const Color(0xFF0F172A),
-            const Color(0xFF1E293B),
-            const Color(0xFF0F172A)
+            const Color(0xFF020617), // Deepest Midnight
+            const Color(0xFF0F172A), // Dark Slate Blue
+            const Color(0xFF1E293B), // Soft Horizon Blue
           ]
         : [
-            const Color(0xFF0EA5E9),
-            const Color(0xFF38BDF8),
-            const Color(0xFF7DD3FC)
+            const Color(0xFF0369A1), // Deep Azure
+            const Color(0xFF0EA5E9), // Sky Blue
+            const Color(0xFFBAE6FD), // Soft Horizon Light
           ];
 
     canvas.drawRect(
@@ -110,7 +110,7 @@ class FloodScenePainter extends CustomPainter {
     final h = size.height;
     final imgW = cityImage!.width.toDouble();
     final imgH = cityImage!.height.toDouble();
-    
+
     // Calculate scale to fit width while maintaining aspect ratio
     final double scale = w / imgW;
     final double drawW = w;
@@ -123,7 +123,7 @@ class FloodScenePainter extends CustomPainter {
       Rect.fromLTWH(0, 0, imgW, imgH),
       Rect.fromLTWH(0, h - drawH + 10, drawW, drawH),
       Paint()
-        ..color = Colors.white.withValues(alpha: isDark ? 0.5 : 0.9)
+        ..color = Colors.white.withValues(alpha: isDark ? 0.35 : 0.85)
         ..filterQuality = ui.FilterQuality.high, // Ensure high quality scaling
     );
   }
@@ -220,12 +220,12 @@ class FloodScenePainter extends CustomPainter {
           ).createShader(
               Rect.fromLTWH(w - shadowWidth, offset.dy, shadowWidth, h)));
 
-    // 2. Technical Grid (Lines)
+    // 2. Technical Grid (Lines) - ULTRA SUBTLE
     final gridPaint = Paint()
       ..color = Colors.white.withValues(alpha: 0.05)
       ..strokeWidth = 0.8;
 
-    const step = 40.0;
+    const step = 45.0;
     for (double x = 0; x <= w; x += step) {
       canvas.drawLine(
           Offset(x, offset.dy), Offset(x, offset.dy + h), gridPaint);
@@ -253,7 +253,8 @@ class FloodScenePainter extends CustomPainter {
     final targetY = offset.dy + h / 2 - 10;
 
     // Display "---" if offline
-    final String percentText = isOnline ? '${(customFill * 100).toInt()}%' : '---';
+    final String percentText =
+        isOnline ? '${(customFill * 100).toInt()}%' : '---';
 
     final percentTp = TextPainter(
       text: TextSpan(
@@ -273,7 +274,7 @@ class FloodScenePainter extends CustomPainter {
     _drawEnhancedStatusBadge(canvas, w, targetY - percentTp.height / 2 - 35);
 
     // Display "STALE" or current MDPL with indicator
-    final String mdplText = isOnline 
+    final String mdplText = isOnline
         ? '${waterLevel.toStringAsFixed(2)} m (MDPL)'
         : 'LAST KNOWN: ${waterLevel.toStringAsFixed(2)} m';
 
@@ -445,7 +446,8 @@ class FloodScenePainter extends CustomPainter {
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
     );
 
-    canvas.drawRRect(rrect, Paint()..color = isOnline ? statusColor : Colors.blueGrey);
+    canvas.drawRRect(
+        rrect, Paint()..color = isOnline ? statusColor : Colors.blueGrey);
 
     canvas.drawRRect(
       rrect,

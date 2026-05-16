@@ -26,18 +26,18 @@
             <p>Kami menerima permintaan untuk mereset password akun WaterSense Anda. Klik tombol di bawah ini untuk melanjutkan proses pemulihan akun:</p>
             
             <div class="btn-container">
-                <a href="{{ url('password/reset/'.$token.'?email='.$email) }}" class="btn">RESET PASSWORD SEKARANG</a>
+                <a href="watersense://reset-password?token={{ $token }}&email={{ $email }}" class="btn">BUKA APLIKASI & RESET PASSWORD</a>
             </div>
 
-            <p>Link ini hanya berlaku selama 60 menit. Jika Anda tidak merasa melakukan permintaan ini, silakan abaikan email ini.</p>
+            <p>Link ini akan otomatis membuka aplikasi WaterSense di handphone Anda. Link hanya berlaku selama 60 menit. Jika Anda tidak merasa melakukan permintaan ini, silakan abaikan email ini.</p>
         </div>
         <div class="footer">
             &copy; {{ date('Y') }} WaterSense IT Command Center. Karawang, Jawa Barat.<br>
             <i>Automated System Notification - Do Not Reply</i>
         </div>
         <div class="warning">
-            Jika tombol tidak berfungsi, salin dan tempel link berikut ke browser Anda:<br>
-            {{ url('password/reset/'.$token.'?email='.$email) }}
+            Jika tombol tidak berfungsi, salin dan tempel link berikut ke browser atau notes Anda untuk membukanya:<br>
+            watersense://reset-password?token={{ $token }}&email={{ $email }}
         </div>
     </div>
 </body>

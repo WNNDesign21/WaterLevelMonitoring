@@ -5,12 +5,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:syncfusion_flutter_datepicker/datepicker.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../home/controllers/home_controller.dart';
-import '../../../data/providers/api_provider.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../data/repositories/sensor_repository.dart';
+import '../../../core/utils/app_snackbar.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AnalysisController extends GetxController {
   final homeController = Get.find<HomeController>();
+  final SensorRepository _sensorRepo = Get.find<SensorRepository>();
 
   var isLoading = false.obs;
   var historyData = <Map<String, dynamic>>[].obs;
@@ -19,10 +21,22 @@ class AnalysisController extends GetxController {
   var maxLevel = 0.0.obs;
   var totalSamples = 0.obs;
   var searchQuery = ''.obs;
+  var showOnlyCritical = false.obs;
+  
+  // Comparison Mode
+  var isComparisonMode = false.obs;
+  var comparisonDeviceSlug = ''.obs;
+  var comparisonHistoryData = <Map<String, dynamic>>[].obs;
+  var comparisonDeviceName = ''.obs;
   
   List<Map<String, dynamic>> get filteredHistoryData {
-    if (searchQuery.value.isEmpty) return historyData;
-    return historyData.where((item) {
+    List<Map<String, dynamic>> baseData = historyData;
+    if (showOnlyCritical.value) {
+      baseData = historyData.where((item) => item['status'] != 'Aman').toList();
+    }
+
+    if (searchQuery.value.isEmpty) return baseData;
+    return baseData.where((item) {
       final time = DateFormat('HH:mm').format(item['time']);
       final date = DateFormat('dd MMMM yyyy', 'id_ID').format(item['time']);
       final status = item['status'].toString().toLowerCase();
@@ -59,123 +73,120 @@ class AnalysisController extends GetxController {
     
     isLoading.value = true;
     try {
-      final apiProvider = Get.find<ApiProvider>(); // Or use homeController._apiProvider if it's public
+      String rangeParam = _getRangeParam();
       
-      String rangeParam = 'daily';
-      if (selectedPeriod.value == 'Harian') rangeParam = 'daily';
-      else if (selectedPeriod.value == 'Mingguan') rangeParam = 'weekly';
-      else if (selectedPeriod.value == 'Bulanan') rangeParam = 'monthly';
-      else if (selectedPeriod.value == 'Tahunan') rangeParam = 'yearly';
-      else if (selectedPeriod.value == 'Custom') rangeParam = 'custom';
-
-      final response = await apiProvider.fetchHistory(
+      // Fetch Main Device
+      final mainResponse = await _sensorRepo.getHistory(
         slug: homeController.selectedDeviceSlug.value,
         range: rangeParam,
         startDate: DateFormat('yyyy-MM-dd').format(startDate.value),
         endDate: DateFormat('yyyy-MM-dd').format(endDate.value),
       );
 
-      if (response != null && response['status'] == 'success') {
-        final List<dynamic> data = response['data'];
-        
-        double sum = 0;
-        double min = 9999.0;
-        double max = -9999.0;
+      if (mainResponse != null && mainResponse['status'] == 'success') {
+        final processed = _processHistoryData(mainResponse['data'], rangeParam);
+        historyData.value = processed['list'];
+        averageLevel.value = processed['avg'];
+        minLevel.value = processed['min'];
+        maxLevel.value = processed['max'];
+        totalSamples.value = processed['count'];
+      }
 
-        final List<Map<String, dynamic>> processedData = [];
-        final int durationDays = endDate.value.difference(startDate.value).inDays;
-        
-        // Use 6-hour aggregation for Weekly OR Custom range between 3-30 days
-        bool useSixHourAggregation = rangeParam == 'weekly' || 
-                                     (rangeParam == 'custom' && durationDays >= 3 && durationDays <= 30);
-
-        if (useSixHourAggregation) {
-          // Group by 6-hour blocks
-          Map<String, List<double>> groups = {};
-          Map<String, DateTime> groupTimes = {};
-
-          for (var item in data) {
-            final time = DateTime.parse(item['t']);
-            final level = (item['y'] as num).toDouble();
-            
-            sum += level;
-            if (level < min) min = level;
-            if (level > max) max = level;
-
-            final block = (time.hour / 6).floor();
-            final key = '${DateFormat('yyyy-MM-dd').format(time)}-$block';
-            
-            if (!groups.containsKey(key)) {
-              groups[key] = [];
-              groupTimes[key] = DateTime(time.year, time.month, time.day, block * 6);
-            }
-            groups[key]!.add(level);
-          }
-
-          groups.forEach((key, levels) {
-            final avg = levels.reduce((a, b) => a + b) / levels.length;
-            final minVal = levels.reduce((a, b) => a < b ? a : b);
-            final maxVal = levels.reduce((a, b) => a > b ? a : b);
-            
-            processedData.add({
-              'time': groupTimes[key],
-              'level': avg,
-              'min': minVal,
-              'max': maxVal,
-              'status': avg > 1.8 ? 'Siaga 1' : 'Aman',
-            });
-          });
-          
-          processedData.sort((a, b) => (a['time'] as DateTime).compareTo(b['time'] as DateTime));
-        } else {
-          // Default mapping for Daily, Monthly, Yearly, and very short/long Custom ranges
-          for (var item in data) {
-            final level = (item['y'] as num).toDouble();
-            final minVal = (item['min'] as num?)?.toDouble() ?? level;
-            final maxVal = (item['max'] as num?)?.toDouble() ?? level;
-            
-            sum += level;
-            if (level < min) min = level;
-            if (level > max) max = level;
-
-            processedData.add({
-              'time': DateTime.parse(item['t']),
-              'level': level,
-              'min': minVal,
-              'max': maxVal,
-              'status': level > 1.8 ? 'Siaga 1' : 'Aman',
-            });
-          }
+      // Fetch Comparison Device if enabled
+      if (isComparisonMode.value && comparisonDeviceSlug.value.isNotEmpty) {
+        final compResponse = await _sensorRepo.getHistory(
+          slug: comparisonDeviceSlug.value,
+          range: rangeParam,
+          startDate: DateFormat('yyyy-MM-dd').format(startDate.value),
+          endDate: DateFormat('yyyy-MM-dd').format(endDate.value),
+        );
+        if (compResponse != null && compResponse['status'] == 'success') {
+          final processed = _processHistoryData(compResponse['data'], rangeParam);
+          comparisonHistoryData.value = processed['list'];
         }
-
-        historyData.value = processedData;
-
-        if (data.isNotEmpty) {
-          averageLevel.value = sum / data.length;
-          minLevel.value = min;
-          maxLevel.value = max;
-        } else {
-          averageLevel.value = 0;
-          minLevel.value = 0;
-          maxLevel.value = 0;
-        }
-        totalSamples.value = data.length;
+      } else {
+        comparisonHistoryData.clear();
       }
     } catch (e) {
       debugPrint('Error fetching history: $e');
     } finally {
       isLoading.value = false;
-      debugPrint('Fetch History Done. Total data: ${historyData.length}');
     }
   }
 
+  String _getRangeParam() {
+    if (selectedPeriod.value == 'Harian') return 'daily';
+    if (selectedPeriod.value == 'Mingguan') return 'weekly';
+    if (selectedPeriod.value == 'Bulanan') return 'monthly';
+    if (selectedPeriod.value == 'Tahunan') return 'yearly';
+    return 'custom';
+  }
+
+  Map<String, dynamic> _processHistoryData(List<dynamic> data, String rangeParam) {
+    double sum = 0;
+    double min = 9999.0;
+    double max = -9999.0;
+    final List<Map<String, dynamic>> processedData = [];
+    final int durationDays = endDate.value.difference(startDate.value).inDays;
+    
+    bool useSixHourAggregation = rangeParam == 'weekly' || 
+                                 (rangeParam == 'custom' && durationDays >= 3 && durationDays <= 30);
+
+    if (useSixHourAggregation) {
+      Map<String, List<double>> groups = {};
+      Map<String, DateTime> groupTimes = {};
+      for (var item in data) {
+        final time = DateTime.parse(item['t']);
+        final level = (item['y'] as num).toDouble();
+        sum += level;
+        if (level < min) min = level;
+        if (level > max) max = level;
+        final block = (time.hour / 6).floor();
+        final key = '${DateFormat('yyyy-MM-dd').format(time)}-$block';
+        if (!groups.containsKey(key)) {
+          groups[key] = [];
+          groupTimes[key] = DateTime(time.year, time.month, time.day, block * 6);
+        }
+        groups[key]!.add(level);
+      }
+      groups.forEach((key, levels) {
+        final avg = levels.reduce((a, b) => a + b) / levels.length;
+        processedData.add({
+          'time': groupTimes[key],
+          'level': avg,
+          'status': avg > 1.8 ? 'Siaga 1' : 'Aman',
+        });
+      });
+      processedData.sort((a, b) => (a['time'] as DateTime).compareTo(b['time'] as DateTime));
+    } else {
+      for (var item in data) {
+        final level = (item['y'] as num).toDouble();
+        sum += level;
+        if (level < min) min = level;
+        if (level > max) max = level;
+        processedData.add({
+          'time': DateTime.parse(item['t']),
+          'level': level,
+          'status': level > 1.8 ? 'Siaga 1' : 'Aman',
+        });
+      }
+    }
+    return {
+      'list': processedData,
+      'avg': data.isEmpty ? 0.0 : sum / data.length,
+      'min': data.isEmpty ? 0.0 : min,
+      'max': data.isEmpty ? 0.0 : max,
+      'count': data.length,
+    };
+  }
+
   void changePeriod(BuildContext context, String period) {
+    if (selectedPeriod.value == period) return;
+    
     selectedPeriod.value = period;
     if (period == 'Custom') {
-      // Trigger the picker directly if Custom is selected from segments
       selectDateRange(context);
     } else {
-      // Set appropriate start/end dates for the period
       final now = DateTime.now();
       if (period == 'Harian') {
         startDate.value = now.subtract(const Duration(days: 1));
@@ -187,174 +198,175 @@ class AnalysisController extends GetxController {
         startDate.value = now.subtract(const Duration(days: 365));
       }
       endDate.value = now;
-      fetchHistory();
+      Future.delayed(const Duration(milliseconds: 150), () {
+        fetchHistory();
+      });
     }
   }
 
   Future<void> selectDateRange(BuildContext context) async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     DateTime? tempStart = startDate.value;
     DateTime? tempEnd = endDate.value;
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-          elevation: 24,
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            height: 480,
-            width: double.infinity,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Rentang Waktu',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 18,
-                    color: isDark ? Colors.white : const Color(0xFF0F172A),
-                  ),
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: context.bgCard,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border(top: BorderSide(color: context.borderColor, width: 1)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: context.dividerColor.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Pilih periode analisis data',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    color: context.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Expanded(
-                  child: SfDateRangePicker(
-                    onSelectionChanged:
-                        (DateRangePickerSelectionChangedArgs args) {
-                      if (args.value is PickerDateRange) {
-                        tempStart = args.value.startDate;
-                        tempEnd = args.value.endDate;
-                      }
-                    },
-                    selectionMode: DateRangePickerSelectionMode.range,
-                    initialSelectedRange:
-                        PickerDateRange(startDate.value, endDate.value),
-                    maxDate: DateTime.now(),
-                    headerStyle: DateRangePickerHeaderStyle(
-                      textAlign: TextAlign.center,
-                      textStyle: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                        color: isDark ? Colors.white : const Color(0xFF0F172A),
-                      ),
-                    ),
-                    monthCellStyle: DateRangePickerMonthCellStyle(
-                      textStyle: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.w500,
-                        color: isDark ? Colors.white : const Color(0xFF0F172A),
-                      ),
-                      todayTextStyle: GoogleFonts.plusJakartaSans(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.accent,
-                      ),
-                      leadingDatesTextStyle:
-                          GoogleFonts.plusJakartaSans(color: context.textMuted),
-                      trailingDatesTextStyle:
-                          GoogleFonts.plusJakartaSans(color: context.textMuted),
-                    ),
-                    yearCellStyle: DateRangePickerYearCellStyle(
-                      textStyle: GoogleFonts.plusJakartaSans(
-                          color:
-                              isDark ? Colors.white : const Color(0xFF0F172A)),
-                      todayTextStyle: GoogleFonts.plusJakartaSans(
-                          color: AppColors.accent, fontWeight: FontWeight.bold),
-                    ),
-                    monthViewSettings: const DateRangePickerMonthViewSettings(
-                      firstDayOfWeek: 1,
-                      enableSwipeSelection: true,
-                    ),
-                    selectionColor: AppColors.accent,
-                    startRangeSelectionColor: AppColors.accent,
-                    endRangeSelectionColor: AppColors.accent,
-                    rangeSelectionColor: AppColors.accent.withOpacity(0.15),
-                    todayHighlightColor: AppColors.accent,
-                    showNavigationArrow: true,
-                    selectionTextStyle: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold),
-                    rangeTextStyle: GoogleFonts.plusJakartaSans(
-                        color: isDark ? Colors.white : const Color(0xFF0F172A)),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: Text(
-                          'BATAL',
-                          style: GoogleFonts.plusJakartaSans(
-                            color: context.textSecondary,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          if (tempStart != null) {
-                            startDate.value = tempStart!;
-                            // If user only selected one date, treat it as a single-day range
-                            endDate.value = tempEnd ?? tempStart!;
-                            selectedPeriod.value = 'Custom';
-                            fetchHistory();
-                            Navigator.pop(context);
-                          } else {
-                            Get.snackbar(
-                              'Peringatan',
-                              'Silakan pilih minimal satu tanggal',
-                              snackPosition: SnackPosition.BOTTOM,
-                              backgroundColor: Colors.orange,
-                              colorText: Colors.white,
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accent,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          elevation: 0,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: Text(
-                          'TERAPKAN',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-              ],
+              ),
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 24),
+            
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.accent.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.date_range_rounded, color: AppColors.accent, size: 20),
+                  ),
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'RENTANG WAKTU',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 12,
+                          color: AppColors.accent,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                      Text(
+                        'Pilih periode analisis data',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: context.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Get.back(),
+                    icon: Icon(Icons.close_rounded, color: context.textMuted, size: 20),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 12),
+            
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SfDateRangePicker(
+                onSelectionChanged: (DateRangePickerSelectionChangedArgs args) {
+                  if (args.value is PickerDateRange) {
+                    tempStart = args.value.startDate;
+                    tempEnd = args.value.endDate;
+                  }
+                },
+                selectionMode: DateRangePickerSelectionMode.range,
+                initialSelectedRange: PickerDateRange(startDate.value, endDate.value),
+                maxDate: DateTime.now(),
+                selectionColor: AppColors.accent,
+                startRangeSelectionColor: AppColors.accent,
+                endRangeSelectionColor: AppColors.accent,
+                rangeSelectionColor: AppColors.accent.withValues(alpha: 0.1),
+                todayHighlightColor: AppColors.accent,
+                headerStyle: DateRangePickerHeaderStyle(
+                  textStyle: GoogleFonts.inter(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: context.textPrimary,
+                  ),
+                ),
+                monthCellStyle: DateRangePickerMonthCellStyle(
+                  textStyle: GoogleFonts.inter(fontSize: 12, color: context.textPrimary),
+                  todayTextStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.accent),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Get.back(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        side: BorderSide(color: context.dividerColor.withValues(alpha: 0.2)),
+                      ),
+                      child: Text(
+                        'BATAL',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                          color: context.textMuted,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (tempStart != null) {
+                          startDate.value = tempStart!;
+                          endDate.value = tempEnd ?? tempStart!;
+                          selectedPeriod.value = 'Custom';
+                          fetchHistory();
+                          Get.back();
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        'TERAPKAN',
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      isScrollControlled: true,
     );
   }
 
@@ -366,51 +378,42 @@ class AnalysisController extends GetxController {
   }
 
   Future<void> exportHistory() async {
+    if (homeController.isGuest.value) {
+      homeController.showGuestRestrictionModal();
+      return;
+    }
+    
     try {
-      // Use the correct key from .env and handle the trailing /api correctly
-      String baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://103.172.205.35/api';
-      
-      // Remove trailing slash if exists
-      if (baseUrl.endsWith('/')) baseUrl = baseUrl.substring(0, baseUrl.length - 1);
-      
       final slug = homeController.selectedDeviceSlug.value;
-      
-      String rangeParam = 'daily';
-      if (selectedPeriod.value == 'Harian') rangeParam = 'daily';
-      else if (selectedPeriod.value == 'Mingguan') rangeParam = 'weekly';
-      else if (selectedPeriod.value == 'Bulanan') rangeParam = 'monthly';
-      else if (selectedPeriod.value == 'Tahunan') rangeParam = 'yearly';
-      else if (selectedPeriod.value == 'Custom') rangeParam = 'custom';
-
+      String rangeParam = _getRangeParam();
       final start = DateFormat('yyyy-MM-dd').format(startDate.value);
       final end = DateFormat('yyyy-MM-dd').format(endDate.value);
-      
-      // Construct URL (baseUrl already includes /api)
-      final url = '$baseUrl/water-level/export?device_slug=$slug&range=$rangeParam&start_date=$start&end_date=$end';
-      
-      debugPrint('Exporting to: $url');
+      final baseUrl = dotenv.env['BASE_URL'] ?? 'http://103.172.205.35.nip.io';
+      final url = '$baseUrl/api/water-level/export?device_slug=$slug&range=$rangeParam&start_date=$start&end_date=$end';
       
       final uri = Uri.parse(url);
-      
-      // Attempt to launch directly. canLaunchUrl can be unreliable on some Android versions.
-      bool launched = await launchUrl(
-        uri, 
-        mode: LaunchMode.externalApplication,
-      );
-
-      if (!launched) {
-        throw 'Sistem tidak dapat menemukan aplikasi untuk membuka link unduhan. Pastikan browser terinstal.';
-      }
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e) {
-      debugPrint('Error exportHistory: $e');
-      Get.snackbar(
-        'Gagal Mengunduh',
-        'Error: $e\n\nLink: ${dotenv.env['API_BASE_URL'] ?? 'http://103.172.205.35/api'}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-        duration: const Duration(seconds: 5),
-      );
+      AppSnackbar.show(title: 'Gagal Mengunduh', message: 'Cek koneksi Anda.', isError: true);
     }
+  }
+
+  void toggleComparison() {
+    if (homeController.isGuest.value) {
+      homeController.showGuestRestrictionModal();
+      return;
+    }
+    isComparisonMode.value = !isComparisonMode.value;
+    if (!isComparisonMode.value) {
+      comparisonDeviceSlug.value = '';
+      comparisonHistoryData.clear();
+    }
+    fetchHistory();
+  }
+
+  void setComparisonDevice(String slug, String name) {
+    comparisonDeviceSlug.value = slug;
+    comparisonDeviceName.value = name;
+    fetchHistory();
   }
 }

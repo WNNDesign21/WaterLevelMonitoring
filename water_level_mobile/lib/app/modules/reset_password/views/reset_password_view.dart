@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../core/theme/app_theme.dart';
 import '../controllers/reset_password_controller.dart';
 
 class ResetPasswordView extends GetView<ResetPasswordController> {
@@ -9,12 +10,12 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.bgPrimary,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: context.bgPrimary,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF1E293B), size: 18),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: context.textPrimary, size: 18),
           onPressed: () => Get.back(),
         ),
         centerTitle: true,
@@ -31,9 +32,10 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: context.bgCard,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: const Color(0xFFF1F5F9)),
+                  border: Border.all(color: context.borderColor),
+                  boxShadow: AppShadows.card(context.isDark),
                 ),
                 child: Row(
                   children: [
@@ -41,10 +43,10 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
                       width: 54,
                       height: 54,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2563EB).withOpacity(0.1),
+                        color: AppColors.accent.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Icon(Icons.person_rounded, color: Color(0xFF2563EB), size: 26),
+                      child: const Icon(Icons.person_rounded, color: AppColors.accent, size: 26),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -56,7 +58,7 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFF64748B),
+                              color: context.textMuted,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -65,7 +67,7 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
-                              color: const Color(0xFF0F172A),
+                              color: context.textPrimary,
                               letterSpacing: -0.3,
                             ),
                           ),
@@ -84,7 +86,7 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
-                  color: const Color(0xFF0F172A),
+                  color: context.textPrimary,
                   letterSpacing: -0.5,
                 ),
               ),
@@ -94,7 +96,7 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: const Color(0xFF64748B),
+                  color: context.textSecondary,
                   height: 1.6,
                 ),
               ),
@@ -102,8 +104,9 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
               const SizedBox(height: 40),
               
               // Form
-              _buildLabel('Password Baru'),
+              _buildLabel(context, 'Password Baru'),
               _buildTextField(
+                context,
                 hint: 'Masukkan password baru',
                 icon: Icons.lock_outline_rounded,
                 isPassword: true,
@@ -114,8 +117,9 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
               
               const SizedBox(height: 20),
               
-              _buildLabel('Konfirmasi Password'),
+              _buildLabel(context, 'Konfirmasi Password'),
               _buildTextField(
+                context,
                 hint: 'Ulangi password baru',
                 icon: Icons.lock_reset_rounded,
                 isPassword: true,
@@ -128,6 +132,7 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
               
               // Submit Button
               _buildPrimaryButton(
+                context,
                 text: 'Simpan Kata Sandi Baru',
                 onPressed: () => controller.updatePassword(),
               ),
@@ -146,7 +151,7 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF64748B),
+                        color: context.textMuted,
                       ),
                     ),
                   ],
@@ -160,7 +165,7 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
     );
   }
 
-  Widget _buildLabel(String text) {
+  Widget _buildLabel(BuildContext context, String text) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 8),
       child: Text(
@@ -168,13 +173,14 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
         style: GoogleFonts.plusJakartaSans(
           fontSize: 13,
           fontWeight: FontWeight.w700,
-          color: const Color(0xFF334155),
+          color: context.textPrimary,
         ),
       ),
     );
   }
 
-  Widget _buildTextField({
+  Widget _buildTextField(
+    BuildContext context, {
     required String hint, 
     required IconData icon, 
     bool isPassword = false,
@@ -184,9 +190,9 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: context.bgCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: context.borderColor),
       ),
       child: Obx(() => TextField(
         controller: controller,
@@ -195,21 +201,21 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
         style: GoogleFonts.plusJakartaSans(
           fontSize: 14,
           fontWeight: FontWeight.w600,
-          color: const Color(0xFF1E293B),
+          color: context.textPrimary,
         ),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: GoogleFonts.plusJakartaSans(
             fontSize: 14, 
             fontWeight: FontWeight.w500,
-            color: const Color(0xFF94A3B8),
+            color: context.textMuted.withValues(alpha: 0.6),
           ),
-          prefixIcon: Icon(icon, size: 20, color: const Color(0xFF64748B)),
+          prefixIcon: Icon(icon, size: 20, color: context.textMuted),
           suffixIcon: isPassword ? IconButton(
             icon: Icon(
               (isVisible?.value ?? false) ? Icons.visibility_rounded : Icons.visibility_off_rounded,
               size: 18,
-              color: const Color(0xFF94A3B8),
+              color: context.textMuted,
             ),
             onPressed: onToggle,
           ) : null,
@@ -220,14 +226,14 @@ class ResetPasswordView extends GetView<ResetPasswordController> {
     );
   }
 
-  Widget _buildPrimaryButton({required String text, required VoidCallback onPressed}) {
+  Widget _buildPrimaryButton(BuildContext context, {required String text, required VoidCallback onPressed}) {
     return SizedBox(
       width: double.infinity,
       height: 60,
       child: Obx(() => ElevatedButton(
         onPressed: controller.isLoading.value ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2563EB),
+          backgroundColor: AppColors.accent,
           foregroundColor: Colors.white,
           elevation: 0,
           shadowColor: Colors.transparent,
